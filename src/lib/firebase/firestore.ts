@@ -5,7 +5,6 @@ import {
   getDocs,
   setDoc,
   updateDoc,
-  deleteDoc,
   addDoc,
   query,
   where,
@@ -15,15 +14,10 @@ import {
   QueryConstraint,
   DocumentSnapshot,
   QueryDocumentSnapshot,
-  Timestamp,
   serverTimestamp,
   onSnapshot,
-  Query,
   DocumentData,
   QuerySnapshot,
-  WriteBatch,
-  writeBatch,
-  increment,
   getCountFromServer,
 } from "firebase/firestore";
 import { db } from "./config";
@@ -102,7 +96,7 @@ export const updateUserDocument = async (
 
 export const createIssue = async (
   payload: CreateIssuePayload & {
-    citizenId: string;
+    citizenId:    string;
     citizenName?: string;
     citizenEmail?: string;
   }
@@ -119,9 +113,7 @@ export const createIssue = async (
     updatedAt:          serverTimestamp(),
   };
 
-  const docRef = await addDoc(issuesRef, newIssue);
-
-  // Return with resolved timestamps
+  const docRef     = await addDoc(issuesRef, newIssue);
   const createdSnap = await getDoc(docRef);
   return docToIssue(createdSnap);
 };
@@ -155,7 +147,6 @@ export const getIssuesByUser = async (
     orderBy("createdAt", "desc"),
     limit(pageLimit)
   );
-
   const snap = await getDocs(q);
   return snap.docs.map(docToIssue);
 };
@@ -185,15 +176,15 @@ export const getAllIssues = async (
     constraints.push(startAfter(lastDoc));
   }
 
-  const q     = query(issuesRef, ...constraints);
-  const snap  = await getDocs(q);
+  const q      = query(issuesRef, ...constraints);
+  const snap   = await getDocs(q);
   const issues = snap.docs.map(docToIssue);
   const last   = snap.docs[snap.docs.length - 1] ?? null;
 
   return { issues, lastDoc: last };
 };
 
-// ─── Real-time Listener ──────────────────────────────────────
+// ─── Real-time Listeners ─────────────────────────────────────
 
 export const subscribeToUserIssues = (
   citizenId: string,
@@ -228,9 +219,8 @@ export const subscribeToIssue = (
 
 // ─── Analytics Queries ───────────────────────────────────────
 
-export const getIssueCountByStatus = async (): Promise
-  Record<string, number>
-> => {
+// FIX: Promise<Record<string, number>> — angle brackets were stripped by chat renderer
+export const getIssueCountByStatus = async (): Promise<Record<string, number>> => {
   const statuses = ["reported", "assigned", "in-progress", "resolved"];
   const counts: Record<string, number> = {};
 
@@ -248,9 +238,8 @@ export const getIssueCountByStatus = async (): Promise
   return counts;
 };
 
-export const getIssueCountByCategory = async (): Promise
-  Record<string, number>
-> => {
+// FIX: Promise<Record<string, number>> — angle brackets were stripped by chat renderer
+export const getIssueCountByCategory = async (): Promise<Record<string, number>> => {
   const categories = ["road", "garbage", "water", "streetlight", "sanitation"];
   const counts: Record<string, number> = {};
 

@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "your-firebase-project-id"
-  }
+    "default": "civic-report-4e866"
+  },
+  "targets": {},
+  "etags": {}
 }

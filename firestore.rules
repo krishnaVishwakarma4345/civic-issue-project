@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper Functions ─────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isValidRole(role) {
+      return role == 'citizen' || role == 'admin';
+    }
+
+    // ─── Users Collection ─────────────────────────────────────
+    match /users/{userId} {
+      // Read: own doc or admin
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+
+      // Create: only own document, role must be citizen
+      allow create: if isAuthenticated() &&
+        isOwner(userId) &&
+        request.resource.data.role == 'citizen' &&
+        request.resource.data.email is string &&
+        request.resource.data.name is string;
+
+      // Update: own doc but cannot change role
+      allow update: if isAuthenticated() &&
+        isOwner(userId) &&
+        request.resource.data.role == resource.data.role;
+
+      // Delete: nobody
+      allow delete: if false;
+    }
+
+    // ─── Issues Collection ────────────────────────────────────
+    match /issues/{issueId} {
+      // Read: own issues or admin
+      allow read: if isAuthenticated() &&
+        (resource.data.citizenId == request.auth.uid || isAdmin());
+
+      // Create: authenticated citizens only
+      allow create: if isAuthenticated() &&
+        request.resource.data.citizenId == request.auth.uid &&
+        request.resource.data.status == 'reported' &&
+        request.resource.data.title is string &&
+        request.resource.data.title.size() >= 5 &&
+        request.resource.data.title.size() <= 100 &&
+        request.resource.data.description is string &&
+        request.resource.data.description.size() >= 20 &&
+        request.resource.data.description.size() <= 1000;
+
+      // Update: admin can update all fields, citizen can only update images
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        (resource.data.citizenId == request.auth.uid &&
+         request.resource.data.status == resource.data.status)
+      );
+
+      // Delete: admin only
+      allow delete: if isAdmin();
+    }
+
+    // ─── Deny everything else ─────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

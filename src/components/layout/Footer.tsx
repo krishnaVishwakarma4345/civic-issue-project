@@ -57,7 +57,7 @@ export default function Footer() {
             <ul className="space-y-2.5">
               <li>
                 
-                  href="mailto:support@civicreport.gov.in"
+                <a  href="mailto:support@civicreport.gov.in"
                   className="flex items-center gap-2 text-sm text-gray-500 hover:text-primary-600 transition-colors"
                 >
                   <Mail size={14} />
@@ -66,7 +66,7 @@ export default function Footer() {
               </li>
               <li>
                 
-                  href="#"
+              <a    href="#"
                   className="flex items-center gap-2 text-sm text-gray-500 hover:text-primary-600 transition-colors"
                 >
                   <Globe size={14} />
@@ -75,7 +75,7 @@ export default function Footer() {
               </li>
               <li>
                 
-                  href="https://github.com"
+                <a  href="https://github.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-gray-500 hover:text-primary-600 transition-colors"

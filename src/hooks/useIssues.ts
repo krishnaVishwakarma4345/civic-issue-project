@@ -9,7 +9,6 @@ import {
   getIssuesByUser,
   subscribeToUserIssues,
 } from "@/lib/firebase/firestore";
-import { uploadMultipleImages } from "@/lib/firebase/storage";
 import { CreateIssuePayload, Issue } from "@/types/issue";
 import { getIdToken } from "@/lib/firebase/auth";
 
@@ -70,12 +69,7 @@ export const useIssues = () => {
 
         // 2. Upload images if any
         if (imageFiles.length > 0) {
-          const uploadResults = await uploadMultipleImages(
-            imageFiles,
-            userData.uid,
-            issue.id
-          );
-          const imageUrls = uploadResults.map((r) => r.url);
+        const imageUrls: string[] = []; 
 
           // 3. Update issue with image URLs via API
           const token = await getIdToken(true);
