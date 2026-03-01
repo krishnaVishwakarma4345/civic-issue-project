@@ -1,3 +1,4 @@
+// src/app/api/issues/all/route.ts
 import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/firebase-admin/auth";
 import { adminDb }     from "@/lib/firebase-admin/config";

@@ -1,7 +1,4 @@
-const fs = require('fs');
-const path = 'src/app/(citizen)/report-issue/page.tsx';
-
-const content = `"use client";
+"use client";
 
 import React, { useState, useCallback } from "react";
 import { useRouter }                    from "next/navigation";
@@ -23,7 +20,7 @@ import { PRIORITIES }     from "@/lib/constants/priorities";
 import { cn }             from "@/lib/utils/cn";
 import type { IssueLocation } from "@/types/issue";
 
-const CATEGORY_OPTIONS = CATEGORIES.map((c) => ({ value: c.value, label: \`\${c.icon} \${c.label}\` }));
+const CATEGORY_OPTIONS = CATEGORIES.map((c) => ({ value: c.value, label: `${c.icon} ${c.label}` }));
 const PRIORITY_OPTIONS = PRIORITIES.map((p) => ({ value: p.value, label: p.label }));
 
 const FORM_STEPS = [
@@ -46,13 +43,21 @@ export default function ReportIssuePage() {
     setManualLocation,
   } = useGeolocation();
 
-  const [currentStep,   setCurrentStep]  = useState(1);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [submitError,   setSubmitError]  = useState<string | null>(null);
-  const [manualAddress, setManualAddress] = useState("");
+  const [currentStep,    setCurrentStep]        = useState(1);
+  const [submitSuccess,  setSubmitSuccess]       = useState(false);
+  const [submitError,    setSubmitError]         = useState<string | null>(null);
+  const [manualAddress,  setManualAddress]       = useState("");
   const [manualLocation, setLocalManualLocation] = useState<IssueLocation | null>(null);
 
-  const { register, handleSubmit, watch, trigger, formState: { errors } } = useForm<CreateIssueFormData>({
+  // ── FIX: pull setValue out of useForm so we can sync address ──
+  const {
+    register,
+    handleSubmit,
+    watch,
+    trigger,
+    setValue,                          // ← added
+    formState: { errors },
+  } = useForm<CreateIssueFormData>({
     resolver:      zodResolver(createIssueSchema),
     defaultValues: { title: "", description: "", category: undefined, priority: undefined, address: "" },
     mode:          "onChange",
@@ -60,20 +65,19 @@ export default function ReportIssuePage() {
 
   const watchedValues = watch();
 
-  // The effective location — GPS takes priority, then manual
+  // GPS location takes priority over manual
   const effectiveLocation = location ?? manualLocation;
 
-  // ─── Step Navigation ──────────────────────────────────────
+  // ─── Step Navigation ───────────────────────────────────────────────────────
   const handleNext = async () => {
     const stepFields: Record<number, (keyof CreateIssueFormData)[]> = {
       1: ["title", "description", "category", "priority"],
-      2: [],
+      2: ["address"],                  // ← validate address field on step 2
     };
     const fieldsToValidate = stepFields[currentStep] ?? [];
     const valid = fieldsToValidate.length === 0 ? true : await trigger(fieldsToValidate);
     if (!valid) return;
 
-    // Step 2: require at least a manual address
     if (currentStep === 2 && !effectiveLocation && manualAddress.trim() === "") {
       setSubmitError("Please detect your location or enter an address before continuing.");
       return;
@@ -88,25 +92,36 @@ export default function ReportIssuePage() {
     setCurrentStep((s) => Math.max(s - 1, 1));
   };
 
-  // ─── GPS Location ─────────────────────────────────────────
+  // ─── GPS Location ──────────────────────────────────────────────────────────
   const handleGetLocation = async () => {
     const loc = await getLocation();
     if (loc) {
       setManualAddress(loc.address);
+      // ── FIX: write GPS address into form state so Zod sees it ──
+      setValue("address", loc.address, { shouldValidate: true });
     }
   };
 
-  // ─── Manual Address ───────────────────────────────────────
-  const handleManualAddress = useCallback((address: string) => {
-    setManualAddress(address);
-    if (address.trim()) {
-      const loc: IssueLocation = { latitude: 20.5937, longitude: 78.9629, address };
-      setLocalManualLocation(loc);
-      setManualLocation(loc);
-    }
-  }, [setManualLocation]);
+  // ─── Manual Address ────────────────────────────────────────────────────────
+  const handleManualAddress = useCallback(
+    (address: string) => {
+      setManualAddress(address);
+      // ── FIX: keep form field in sync so Zod validation passes ──
+      setValue("address", address, { shouldValidate: true });
 
-  // ─── Submit ───────────────────────────────────────────────
+      if (address.trim()) {
+        const loc: IssueLocation = { latitude: 20.5937, longitude: 78.9629, address };
+        setLocalManualLocation(loc);
+        setManualLocation(loc);
+      } else {
+        // Clear manual location if address is wiped
+        setLocalManualLocation(null);
+      }
+    },
+    [setManualLocation, setValue]      // ← added setValue to deps
+  );
+
+  // ─── Submit ────────────────────────────────────────────────────────────────
   const onSubmit = async (data: CreateIssueFormData) => {
     const finalLocation = effectiveLocation;
     if (!finalLocation) {
@@ -114,7 +129,9 @@ export default function ReportIssuePage() {
       setCurrentStep(2);
       return;
     }
+
     setSubmitError(null);
+
     const result = await submitIssue(
       {
         title:       data.title,
@@ -125,15 +142,16 @@ export default function ReportIssuePage() {
       },
       []
     );
+
     if (result) {
       setSubmitSuccess(true);
-      setTimeout(() => router.push(\`/issues/\${result.id}\`), 2500);
+      setTimeout(() => router.push(`/issues/${result.id}`), 2500);
     } else {
       setSubmitError("Submission failed. Please try again.");
     }
   };
 
-  // ─── Success State ────────────────────────────────────────
+  // ─── Success State ─────────────────────────────────────────────────────────
   if (submitSuccess) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -207,7 +225,7 @@ export default function ReportIssuePage() {
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
 
-        {/* Step 1: Issue Details */}
+        {/* ── Step 1: Issue Details ─────────────────────────────────── */}
         {currentStep === 1 && (
           <Card>
             <div className="flex items-center gap-2 mb-5">
@@ -269,7 +287,7 @@ export default function ReportIssuePage() {
           </Card>
         )}
 
-        {/* Step 2: Location */}
+        {/* ── Step 2: Location ──────────────────────────────────────── */}
         {currentStep === 2 && (
           <Card>
             <div className="flex items-center gap-2 mb-5">
@@ -309,11 +327,18 @@ export default function ReportIssuePage() {
                 </div>
               </div>
 
+              {/*
+                ── FIX: use {...register("address")} so RHF tracks the value,
+                   AND keep the controlled value + onChange for manualAddress state.
+                   The onChange from register is overridden by our handler which
+                   also calls setValue internally.
+              */}
               <Input
                 label="Address / Landmark"
                 placeholder="e.g. Near Shivaji Park, Dadar, Mumbai"
                 value={manualAddress}
                 onChange={(e) => handleManualAddress(e.target.value)}
+                error={errors.address?.message}
                 leftIcon={<MapPin size={16} />}
                 required
                 hint="Enter a specific address or nearby landmark"
@@ -337,7 +362,7 @@ export default function ReportIssuePage() {
           </Card>
         )}
 
-        {/* Step 3: Review & Submit */}
+        {/* ── Step 3: Review & Submit ───────────────────────────────── */}
         {currentStep === 3 && (
           <Card>
             <div className="flex items-center gap-2 mb-5">
@@ -413,7 +438,3 @@ function ReviewRow({ label, value, truncate = false }: { label: string; value?: 
     </div>
   );
 }
-`;
-
-fs.writeFileSync(path, content, 'utf8');
-console.log('Done! File size:', content.length);

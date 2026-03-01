@@ -230,7 +230,7 @@ export default function AdminIssueDetailPage() {
                 <p className="text-xs font-medium text-gray-500 mb-1">📍 Location</p>
                 <p className="text-gray-800">{issue.location.address}</p>
                 
-                  href={`https://maps.google.com/?q=${issue.location.latitude},${issue.location.longitude}`}
+                <a  href={`https://maps.google.com/?q=${issue.location.latitude},${issue.location.longitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs text-primary-600 mt-1 hover:underline"
@@ -256,7 +256,7 @@ export default function AdminIssueDetailPage() {
             </div>
           </Card>
 
-          {/* Images */}
+          {/* Images
           {issue.images.length > 0 && (
             <Card>
               <p className="section-title mb-4">
@@ -266,7 +266,7 @@ export default function AdminIssueDetailPage() {
                 {issue.images.map((url, i) => (
                   
                     key={i}
-                    href={url}
+                     <a href={url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="relative aspect-square rounded-xl overflow-hidden group block bg-gray-100"
@@ -288,7 +288,7 @@ export default function AdminIssueDetailPage() {
                 ))}
               </div>
             </Card>
-          )}
+          )} */}
         </div>
 
         {/* ─── Right Column (Management Panel) ─────────── */}

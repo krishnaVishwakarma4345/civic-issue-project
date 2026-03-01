@@ -173,7 +173,8 @@ export default function IssueDetailPage() {
 
         {/* Open in Maps */}
         <div className="mt-4 pt-4 border-t border-gray-100">
-          
+          {/* FIX: was missing the opening <a tag — started directly with href= */}
+          <a
             href={`https://maps.google.com/?q=${issue.location.latitude},${issue.location.longitude}`}
             target="_blank"
             rel="noopener noreferrer"
@@ -237,7 +238,8 @@ export default function IssueDetailPage() {
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {issue.images.map((url, index) => (
-              
+              // FIX: was missing the opening <a tag — started directly with key={index}
+              <a
                 key={index}
                 href={url}
                 target="_blank"
