@@ -4,7 +4,7 @@ import React, { useState, useCallback } from "react";
 import { useRouter }                    from "next/navigation";
 import { useForm }                      from "react-hook-form";
 import { zodResolver }                  from "@hookform/resolvers/zod";
-import { MapPin, Loader2, CheckCircle2, Navigation } from "lucide-react";
+import { MapPin, Loader2, CheckCircle2, Navigation, ImageIcon } from "lucide-react";
 import { useIssues }      from "@/hooks/useIssues";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import PageHeader         from "@/components/layout/PageHeader";
@@ -14,6 +14,7 @@ import Textarea           from "@/components/ui/Textarea";
 import Select             from "@/components/ui/Select";
 import Button             from "@/components/ui/Button";
 import Alert              from "@/components/ui/Alert";
+import ImageUploader      from "@/components/issues/ImageUploader";
 import { createIssueSchema, type CreateIssueFormData } from "@/lib/utils/validators";
 import { CATEGORIES }     from "@/lib/constants/categories";
 import { PRIORITIES }     from "@/lib/constants/priorities";
@@ -43,19 +44,19 @@ export default function ReportIssuePage() {
     setManualLocation,
   } = useGeolocation();
 
-  const [currentStep,    setCurrentStep]        = useState(1);
-  const [submitSuccess,  setSubmitSuccess]       = useState(false);
-  const [submitError,    setSubmitError]         = useState<string | null>(null);
-  const [manualAddress,  setManualAddress]       = useState("");
-  const [manualLocation, setLocalManualLocation] = useState<IssueLocation | null>(null);
+  const [currentStep,       setCurrentStep]        = useState(1);
+  const [submitSuccess,     setSubmitSuccess]       = useState(false);
+  const [submitError,       setSubmitError]         = useState<string | null>(null);
+  const [manualAddress,     setManualAddress]       = useState("");
+  const [manualLocation,    setLocalManualLocation] = useState<IssueLocation | null>(null);
+  const [uploadedImageUrls, setUploadedImageUrls]   = useState<string[]>([]);
 
-  // ── FIX: pull setValue out of useForm so we can sync address ──
   const {
     register,
     handleSubmit,
     watch,
     trigger,
-    setValue,                          // ← added
+    setValue,
     formState: { errors },
   } = useForm<CreateIssueFormData>({
     resolver:      zodResolver(createIssueSchema),
@@ -63,16 +64,25 @@ export default function ReportIssuePage() {
     mode:          "onChange",
   });
 
-  const watchedValues = watch();
-
-  // GPS location takes priority over manual
+  const watchedValues     = watch();
   const effectiveLocation = location ?? manualLocation;
 
+  // ─── Image upload callback ─────────────────────────────────────────────────
+  const handleUploadComplete = useCallback((newUrls: string[]) => {
+    setUploadedImageUrls((prev) => [...prev, ...newUrls]);
+  }, []);
+
   // ─── Step Navigation ───────────────────────────────────────────────────────
-  const handleNext = async () => {
+  // FIX: explicitly call e.preventDefault() + e.stopPropagation() so the
+  // browser never treats these buttons as form submitters, regardless of
+  // whether the Button component forwards the type prop to <button>.
+  const handleNext = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     const stepFields: Record<number, (keyof CreateIssueFormData)[]> = {
       1: ["title", "description", "category", "priority"],
-      2: ["address"],                  // ← validate address field on step 2
+      2: ["address"],
     };
     const fieldsToValidate = stepFields[currentStep] ?? [];
     const valid = fieldsToValidate.length === 0 ? true : await trigger(fieldsToValidate);
@@ -87,7 +97,9 @@ export default function ReportIssuePage() {
     setCurrentStep((s) => Math.min(s + 1, TOTAL_STEPS));
   };
 
-  const handleBack = () => {
+  const handleBack = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
     setSubmitError(null);
     setCurrentStep((s) => Math.max(s - 1, 1));
   };
@@ -97,7 +109,6 @@ export default function ReportIssuePage() {
     const loc = await getLocation();
     if (loc) {
       setManualAddress(loc.address);
-      // ── FIX: write GPS address into form state so Zod sees it ──
       setValue("address", loc.address, { shouldValidate: true });
     }
   };
@@ -106,19 +117,16 @@ export default function ReportIssuePage() {
   const handleManualAddress = useCallback(
     (address: string) => {
       setManualAddress(address);
-      // ── FIX: keep form field in sync so Zod validation passes ──
       setValue("address", address, { shouldValidate: true });
-
       if (address.trim()) {
         const loc: IssueLocation = { latitude: 20.5937, longitude: 78.9629, address };
         setLocalManualLocation(loc);
         setManualLocation(loc);
       } else {
-        // Clear manual location if address is wiped
         setLocalManualLocation(null);
       }
     },
-    [setManualLocation, setValue]      // ← added setValue to deps
+    [setManualLocation, setValue]
   );
 
   // ─── Submit ────────────────────────────────────────────────────────────────
@@ -139,6 +147,7 @@ export default function ReportIssuePage() {
         category:    data.category,
         priority:    data.priority,
         location:    finalLocation,
+        images:      uploadedImageUrls,
       },
       []
     );
@@ -271,6 +280,7 @@ export default function ReportIssuePage() {
                   {...register("priority")}
                 />
               </div>
+
               {watchedValues.category && (
                 <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
                   {(() => {
@@ -283,6 +293,20 @@ export default function ReportIssuePage() {
                   })()}
                 </div>
               )}
+
+              {/* ── Photo Upload ─────────────────────────────────────── */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <ImageIcon size={15} className="text-gray-400" />
+                  <span className="text-sm font-medium text-gray-700">Attach Photos</span>
+                  <span className="text-xs text-gray-400">(optional, up to 5)</span>
+                </div>
+                <ImageUploader
+                  onUploadComplete={handleUploadComplete}
+                  maxFiles={5}
+                  disabled={submitting}
+                />
+              </div>
             </div>
           </Card>
         )}
@@ -327,12 +351,6 @@ export default function ReportIssuePage() {
                 </div>
               </div>
 
-              {/*
-                ── FIX: use {...register("address")} so RHF tracks the value,
-                   AND keep the controlled value + onChange for manualAddress state.
-                   The onChange from register is overridden by our handler which
-                   also calls setValue internally.
-              */}
               <Input
                 label="Address / Landmark"
                 placeholder="e.g. Near Shivaji Park, Dadar, Mumbai"
@@ -382,6 +400,14 @@ export default function ReportIssuePage() {
                   value={PRIORITIES.find((p) => p.value === watchedValues.priority)?.label ?? watchedValues.priority}
                 />
                 <ReviewRow label="Location" value={effectiveLocation?.address ?? "Not captured"} />
+                <ReviewRow
+                  label="Photos"
+                  value={
+                    uploadedImageUrls.length > 0
+                      ? `${uploadedImageUrls.length} photo${uploadedImageUrls.length !== 1 ? "s" : ""} attached`
+                      : "No photos attached"
+                  }
+                />
               </div>
 
               {!effectiveLocation && (
@@ -398,21 +424,37 @@ export default function ReportIssuePage() {
           </Card>
         )}
 
-        {/* Navigation Buttons */}
+        {/* ── Navigation Buttons ────────────────────────────────────── */}
+        {/* FIX: use native <button type="button"> for Back and Next so the
+            browser NEVER treats them as submit triggers — no dependency on
+            how the Button wrapper component forwards the type prop.
+            Only the final Submit uses the Button component with type="submit". */}
         <div className="flex items-center justify-between mt-4 gap-3">
-          <Button
+          <button
             type="button"
-            variant="secondary"
             onClick={handleBack}
             disabled={currentStep === 1}
+            className={cn(
+              "px-4 py-2 rounded-lg border border-gray-200 bg-white",
+              "text-sm font-medium text-gray-700 transition-all",
+              "hover:bg-gray-50 hover:border-gray-300",
+              "focus:outline-none focus:ring-2 focus:ring-gray-200 focus:ring-offset-1",
+              currentStep === 1 && "opacity-40 cursor-not-allowed pointer-events-none"
+            )}
           >
             Back
-          </Button>
+          </button>
 
           {currentStep < TOTAL_STEPS ? (
-            <Button type="button" variant="primary" onClick={handleNext}>
+            <button
+              type="button"
+              onClick={handleNext}
+              className="px-5 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium
+                         hover:bg-primary-700 transition-colors
+                         focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-1"
+            >
               Next
-            </Button>
+            </button>
           ) : (
             <Button
               type="submit"
