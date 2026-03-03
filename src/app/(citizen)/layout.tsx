@@ -1,33 +1,34 @@
 "use client";
 
-import React, { useState } from "react";
-import Navbar  from "@/components/layout/Navbar";
-import Sidebar from "@/components/layout/Sidebar";
-import Footer  from "@/components/layout/Footer";
+import React, { useState, useEffect } from "react";
+import { useRouter }      from "next/navigation";
+import Navbar             from "@/components/layout/Navbar";
+import Sidebar            from "@/components/layout/Sidebar";
+import Footer             from "@/components/layout/Footer";
 import { useAuthContext } from "@/context/AuthContext";
 import { PageLoader }     from "@/components/ui/Spinner";
-import { redirect }       from "next/navigation";
-import { cn }             from "@/lib/utils/cn";
 
 export default function CitizenLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router                           = useRouter();
   const { isLoggedIn, isAdmin, loading } = useAuthContext();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Show loader while auth resolves
-  if (loading) return <PageLoader message="Loading your workspace..." />;
+  // FIX: redirect() is Server Component only. In a "use client" component
+  // it throws during render, causing the "Application error" crash on logout.
+  // Use useRouter inside useEffect instead — runs after render, never throws.
+  useEffect(() => {
+    if (loading) return;                          // wait for auth to resolve
+    if (!isLoggedIn) router.replace("/login");    // not logged in → login
+    if (isAdmin)     router.replace("/admin/dashboard"); // wrong role → admin
+  }, [loading, isLoggedIn, isAdmin, router]);
 
-  // Redirect if not logged in
-  if (!isLoggedIn) {
-    redirect("/login");
-  }
-
-  // Redirect admin to admin panel
-  if (isAdmin) {
-    redirect("/admin/dashboard");
+  // Show loader while auth is resolving OR while redirect is in progress
+  if (loading || !isLoggedIn || isAdmin) {
+    return <PageLoader message="Loading your workspace..." />;
   }
 
   return (

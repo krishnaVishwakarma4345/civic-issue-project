@@ -1,21 +1,20 @@
 // src/hooks/useIssues.ts
 "use client";
 
-import { useCallback, useEffect } from "react";
-import { useAuthContext } from "@/context/AuthContext";
-import { useIssueStore } from "@/store/issueStore";
-import { useNotifications } from "@/context/NotificationContext";
+import { useCallback, useEffect, useRef } from "react";
+import { useAuthContext }    from "@/context/AuthContext";
+import { useIssueStore }     from "@/store/issueStore";
+import { useNotifications }  from "@/context/NotificationContext";
 import {
   createIssue,
-  getIssuesByUser,
   subscribeToUserIssues,
 } from "@/lib/firebase/firestore";
+import { getIdToken }        from "@/lib/firebase/auth";
 import { CreateIssuePayload, Issue } from "@/types/issue";
-import { getIdToken } from "@/lib/firebase/auth";
 
 export const useIssues = () => {
-  const { userData }         = useAuthContext();
-  const { addNotification }  = useNotifications();
+  const { userData }        = useAuthContext();
+  const { addNotification } = useNotifications();
   const {
     myIssues,
     loading,
@@ -23,32 +22,48 @@ export const useIssues = () => {
     error,
     setMyIssues,
     addIssue,
-    updateIssue,
     setLoading,
     setSubmitting,
     setError,
   } = useIssueStore();
 
-  // ─── Real-time subscription to user's own issues ──────────
-
+  // Track mount state so we never call setState after unmount
+  // (Firestore snapshot can fire one last time during logout navigation)
+  const mountedRef = useRef(true);
   useEffect(() => {
-    if (!userData?.uid) return;
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  // ─── Real-time subscription ───────────────────────────────
+  useEffect(() => {
+    // FIX: if uid is missing (user logged out or not yet loaded),
+    // clear the list and bail — never pass undefined to Firestore
+    if (!userData?.uid) {
+      setMyIssues([]);
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
 
     const unsubscribe = subscribeToUserIssues(userData.uid, (issues) => {
-      setMyIssues(issues);
-      setLoading(false);
+      // FIX: only update state if still mounted — prevents the crash
+      // that happens when Firestore fires its final snapshot during the
+      // brief window between logout and the /login redirect completing
+      if (mountedRef.current) {
+        setMyIssues(issues);
+        setLoading(false);
+      }
     });
 
     return () => unsubscribe();
   }, [userData?.uid, setMyIssues, setLoading]);
 
   // ─── Submit new issue ─────────────────────────────────────
-
   const submitIssue = useCallback(
     async (
-      payload: CreateIssuePayload,
+      payload:    CreateIssuePayload,
       imageFiles: File[]
     ): Promise<Issue | null> => {
       if (!userData) {
@@ -60,7 +75,6 @@ export const useIssues = () => {
       setError(null);
 
       try {
-        // 1. Create issue doc first to get the ID
         const issue = await createIssue({
           ...payload,
           citizenId:    userData.uid,
@@ -68,22 +82,21 @@ export const useIssues = () => {
           citizenEmail: userData.email,
         });
 
-        // 2. Upload images if any
+        // If caller still passes image files (legacy), patch them via API
         if (imageFiles.length > 0) {
-        const imageUrls: string[] = []; 
-
-          // 3. Update issue with image URLs via API
-          const token = await getIdToken(true);
-          await fetch("/api/issues/update", {
-            method: "PATCH",
-            headers: {
-              "Content-Type":  "application/json",
-              "Authorization": `Bearer ${token}`,
-            },
-            body: JSON.stringify({ id: issue.id, images: imageUrls }),
-          });
-
-          issue.images = imageUrls;
+          try {
+            const token = await getIdToken(true);
+            await fetch("/api/issues/update", {
+              method:  "PATCH",
+              headers: {
+                "Content-Type":  "application/json",
+                "Authorization": `Bearer ${token}`,
+              },
+              body: JSON.stringify({ id: issue.id, images: payload.images ?? [] }),
+            });
+          } catch (patchErr) {
+            console.warn("[useIssues] image patch failed:", patchErr);
+          }
         }
 
         addIssue(issue);
@@ -99,11 +112,7 @@ export const useIssues = () => {
         const message =
           err instanceof Error ? err.message : "Failed to submit issue.";
         setError(message);
-        addNotification({
-          title:   "Submission Failed",
-          message,
-          type:    "error",
-        });
+        addNotification({ title: "Submission Failed", message, type: "error" });
         return null;
       } finally {
         setSubmitting(false);
@@ -112,11 +121,5 @@ export const useIssues = () => {
     [userData, setSubmitting, setError, addIssue, addNotification]
   );
 
-  return {
-    myIssues,
-    loading,
-    submitting,
-    error,
-    submitIssue,
-  };
+  return { myIssues, loading, submitting, error, submitIssue };
 };

@@ -1,21 +1,31 @@
 "use client";
 
-import React       from "react";
-import AdminSidebar from "@/components/layout/AdminSidebar";
-import { useAuthContext } from "@/context/AuthContext";
-import { PageLoader }     from "@/components/ui/Spinner";
-import { redirect }       from "next/navigation";
+import React, { useEffect }  from "react";
+import { useRouter }         from "next/navigation";
+import AdminSidebar          from "@/components/layout/AdminSidebar";
+import { useAuthContext }    from "@/context/AuthContext";
+import { PageLoader }        from "@/components/ui/Spinner";
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router                           = useRouter();
   const { isLoggedIn, isAdmin, loading } = useAuthContext();
 
-  if (loading)    return <PageLoader message="Loading admin panel..." />;
-  if (!isLoggedIn) redirect("/login");
-  if (!isAdmin)    redirect("/dashboard");
+  // FIX: redirect() is Server Component only — crashes in "use client".
+  // Use useRouter inside useEffect instead, same as citizen layout.
+  useEffect(() => {
+    if (loading) return;
+    if (!isLoggedIn) router.replace("/login");
+    if (!isAdmin)    router.replace("/dashboard");
+  }, [loading, isLoggedIn, isAdmin, router]);
+
+  // Show loader while auth resolves or redirect is in-flight
+  if (loading || !isLoggedIn || !isAdmin) {
+    return <PageLoader message="Loading admin panel..." />;
+  }
 
   return (
     <div className="min-h-screen flex bg-gray-100">
