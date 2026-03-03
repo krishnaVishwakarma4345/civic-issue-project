@@ -69,3 +69,14 @@
   height: 100%;
   border-radius: 0.75rem;
 }
+
+/* Fix Leaflet divIcon showing default blue square background */
+.civic-issue-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.user-location-marker {
+  background: transparent !important;
+  border: none !important;
+}
