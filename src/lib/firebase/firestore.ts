@@ -108,6 +108,7 @@ export const createIssue = async (
     ...payload,
     status:             "reported",
     images:             payload.images ?? [],
+    audioUrl:           payload.audioUrl ?? null,
     assignedDepartment: null,
     adminRemarks:       null,
     createdAt:          serverTimestamp(),

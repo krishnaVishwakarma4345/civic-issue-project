@@ -34,6 +34,7 @@ const createIssueSchema = z.object({
     address:   z.string().min(5).max(300),
   }),
   images: z.array(z.string().url()).max(5).default([]),
+  audioUrl: z.string().url().optional(),
 });
 
 // ─── POST /api/issues/create ──────────────────────────────────
@@ -77,6 +78,7 @@ export async function POST(req: NextRequest) {
     const issueData = {
       id:                 docRef.id,
       ...body,
+      audioUrl:           body.audioUrl ?? null,
       status:             "reported",
       citizenId:          user.uid,
       citizenName:        user.name,

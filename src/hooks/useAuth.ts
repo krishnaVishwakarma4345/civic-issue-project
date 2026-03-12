@@ -10,13 +10,14 @@ import {
   logoutUser,
   sendPasswordReset,
   getIdToken,
+  resendVerificationEmail,
 } from "@/lib/firebase/auth";
 import { RegisterPayload, LoginPayload } from "@/types/user";
 import toast from "react-hot-toast";
 
 export const useAuth = () => {
-  const router                    = useRouter();
-  const { userData, loading }     = useAuthContext();
+  const router                          = useRouter();
+  const { userData, loading }           = useAuthContext();
   const { setUser, setToken, clearAuth } = useAuthStore();
   const [authLoading, setAuthLoading]   = useState(false);
   const [authError,   setAuthError]     = useState<string | null>(null);
@@ -125,6 +126,28 @@ export const useAuth = () => {
     }
   }, []);
 
+  // ─── Resend Verification Email ─────────────────────────────
+
+  const resendVerification = useCallback(
+    async (email: string, password: string): Promise<boolean> => {
+      setAuthLoading(true);
+      setAuthError(null);
+      try {
+        await resendVerificationEmail(email, password);
+        toast.success("Verification email resent. Please check your inbox.");
+        return true;
+      } catch (err: unknown) {
+        const message = getFirebaseAuthError(err);
+        setAuthError(message);
+        toast.error(message);
+        return false;
+      } finally {
+        setAuthLoading(false);
+      }
+    },
+    []
+  );
+
   return {
     userData,
     loading: loading || authLoading,
@@ -134,6 +157,7 @@ export const useAuth = () => {
     login,
     logout,
     forgotPassword,
+    resendVerification,
   };
 };
 
@@ -152,6 +176,8 @@ const getFirebaseAuthError = (err: unknown): string => {
       "auth/too-many-requests":       "Too many attempts. Please try again later.",
       "auth/network-request-failed":  "Network error. Check your connection.",
       "auth/user-disabled":           "This account has been disabled.",
+      "auth/email-not-verified":      "Please verify your email before logging in. Check your inbox.",
+      "auth/email-already-verified":  "This email is already verified. You can log in.",
     };
     return messages[code] ?? "An unexpected error occurred. Please try again.";
   }

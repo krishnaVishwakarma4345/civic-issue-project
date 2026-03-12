@@ -62,7 +62,14 @@ export const loginWithEmail = async (
   );
 
   const firebaseUser = credential.user;
-  const userData     = await getUserDocument(firebaseUser.uid);
+
+  // Block login if email has not been verified yet
+  if (!firebaseUser.emailVerified) {
+    await signOut(auth); // sign them back out immediately
+    throw { code: "auth/email-not-verified" };
+  }
+
+  const userData = await getUserDocument(firebaseUser.uid);
 
   return { user: firebaseUser, userData };
 };
@@ -77,6 +84,28 @@ export const logoutUser = async (): Promise<void> => {
 
 export const sendPasswordReset = async (email: string): Promise<void> => {
   await sendPasswordResetEmail(auth, email);
+};
+
+// ─── Resend Verification Email ───────────────────────────────
+
+export const resendVerificationEmail = async (
+  email: string,
+  password: string
+): Promise<void> => {
+  // Sign in temporarily just to get the user object, then send verification
+  const credential: UserCredential = await signInWithEmailAndPassword(
+    auth,
+    email,
+    password
+  );
+
+  if (credential.user.emailVerified) {
+    await signOut(auth);
+    throw { code: "auth/email-already-verified" };
+  }
+
+  await sendEmailVerification(credential.user);
+  await signOut(auth); // sign back out — they're still unverified
 };
 
 // ─── Get ID Token ────────────────────────────────────────────
