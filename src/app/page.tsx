@@ -478,54 +478,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ─── Testimonials ─────────────────────────────────── */}
-      <section id="testimonials" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">
-              Citizens Love CivicReport
-            </h2>
-            <p className="text-gray-500">
-              Real stories from real communities across India.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t) => (
-              <div
-                key={t.name}
-                className="card hover:shadow-md transition-shadow duration-200"
-              >
-                {/* Stars */}
-                <div className="flex items-center gap-1 mb-4">
-                  {Array.from({ length: t.rating }).map((_, i) => (
-                    <Star
-                      key={i}
-                      size={14}
-                      className="text-yellow-400 fill-yellow-400"
-                    />
-                  ))}
-                </div>
-
-                {/* Quote */}
-                <p className="text-sm text-gray-600 leading-relaxed mb-5 italic">
-                  "{t.text}"
-                </p>
-
-                {/* Author */}
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-sm font-bold shrink-0">
-                    {t.avatar}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{t.name}</p>
-                    <p className="text-xs text-gray-400">{t.city}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      
 
       {/* ─── CTA Banner ───────────────────────────────────── */}
       <section className="py-20 bg-primary-600">
