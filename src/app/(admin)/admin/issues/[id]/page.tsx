@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   ExternalLink,
   Save,
+  Mic,
 } from "lucide-react";
 import { subscribeToIssue }    from "@/lib/firebase/firestore";
 import { useAdminIssues }      from "@/hooks/useAdminIssues";
@@ -225,6 +226,23 @@ export default function AdminIssueDetailPage() {
               {issue.description}
             </p>
 
+            {issue.audioUrl && (
+              <div className="mb-5 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                    <Mic size={15} className="text-red-500" />
+                  </div>
+                  <p className="text-xs font-semibold text-gray-700">Audio Description</p>
+                </div>
+                <audio
+                  src={issue.audioUrl}
+                  controls
+                  className="w-full h-10"
+                  preload="metadata"
+                />
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-100 text-sm">
               <div>
                 <p className="text-xs font-medium text-gray-500 mb-1">📍 Location</p>
@@ -256,7 +274,6 @@ export default function AdminIssueDetailPage() {
             </div>
           </Card>
 
-          {/* Images
           {issue.images.length > 0 && (
             <Card>
               <p className="section-title mb-4">
@@ -264,9 +281,9 @@ export default function AdminIssueDetailPage() {
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {issue.images.map((url, i) => (
-                  
+                  <a
                     key={i}
-                     <a href={url}
+                    href={url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="relative aspect-square rounded-xl overflow-hidden group block bg-gray-100"
@@ -288,7 +305,7 @@ export default function AdminIssueDetailPage() {
                 ))}
               </div>
             </Card>
-          )} */}
+          )}
         </div>
 
         {/* ─── Right Column (Management Panel) ─────────── */}

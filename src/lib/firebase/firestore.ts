@@ -46,6 +46,9 @@ const docToIssue = (
   return {
     ...data,
     id:        docSnap.id,
+    images:    Array.isArray(data.images) ? data.images : [],
+    audioUrl:  typeof data.audioUrl === "string" ? data.audioUrl : undefined,
+    location:  data.location ?? { latitude: 0, longitude: 0, address: "" },
     createdAt: data.createdAt?.toDate?.()?.toISOString() ?? data.createdAt,
     updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? data.updatedAt,
   } as Issue;

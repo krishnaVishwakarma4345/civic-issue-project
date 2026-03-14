@@ -14,6 +14,15 @@ import {
   DocumentData,
 } from "firebase-admin/firestore";
 
+type IssueListItem = DocumentData & {
+  id: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  title: string;
+  description: string;
+  location: { address?: string };
+};
+
 // ─── GET /api/issues/all ──────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -70,13 +79,16 @@ export async function GET(req: NextRequest) {
     // ─── Paginate in memory ───────────────────────────────
     const paginated = allDocs.slice(offset, offset + pageLimit);
 
-    let issues = paginated.map((doc) => {
+    let issues: IssueListItem[] = paginated.map((doc) => {
       const data = doc.data();
       return {
         ...data,
         id:        doc.id,
-        createdAt: data.createdAt?.toDate?.()?.toISOString() ?? data.createdAt,
-        updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? data.updatedAt,
+        createdAt: data.createdAt?.toDate?.()?.toISOString() ?? data.createdAt ?? null,
+        updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? data.updatedAt ?? null,
+        title: data.title ?? "",
+        description: data.description ?? "",
+        location: data.location ?? { address: "" },
       };
     });
 

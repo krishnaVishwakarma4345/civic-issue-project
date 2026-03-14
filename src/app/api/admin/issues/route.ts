@@ -13,6 +13,14 @@ import {
   DocumentData,
 } from "firebase-admin/firestore";
 
+type AdminIssueListItem = DocumentData & {
+  id: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  images: string[];
+  audioUrl: string | null;
+};
+
 // ─── GET /api/admin/issues — Paginated + filtered ─────────────
 
 export async function GET(req: NextRequest) {
@@ -52,15 +60,21 @@ export async function GET(req: NextRequest) {
     const total    = fullSnap.size;
     const offset   = (page - 1) * pageLimit;
 
-    let issues = fullSnap.docs
+    let issues: AdminIssueListItem[] = fullSnap.docs
       .slice(offset, offset + pageLimit)
       .map((doc) => {
         const data = doc.data();
         return {
           ...data,
           id:        doc.id,
-          createdAt: data.createdAt?.toDate?.()?.toISOString() ?? data.createdAt,
-          updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? data.updatedAt,
+          createdAt: data.createdAt?.toDate?.()?.toISOString() ?? data.createdAt ?? null,
+          updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? data.updatedAt ?? null,
+          images:    Array.isArray(data.images) ? data.images : [],
+          audioUrl:  typeof data.audioUrl === "string" ? data.audioUrl : null,
+          location:  data.location ?? { address: "" },
+          title:     data.title ?? "",
+          description: data.description ?? "",
+          citizenName: data.citizenName ?? "",
         };
       });
 
