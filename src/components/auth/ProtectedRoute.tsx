@@ -33,7 +33,7 @@ export default function ProtectedRoute({
     const isAdminUser =
       userData?.role === "department-admin" ||
       userData?.role === "master-admin";
-    redirect(isAdminUser ? "/admin/dashboard" : "/dashboard");
+    redirect(isAdminUser ? "/admin/dashboard" : "/report-issue");
   }
 
   return <>{children}</>;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useCallback }  from "react";
+import React, { useRef, useCallback, useEffect, useState }  from "react";
 import {
   Upload,
   X,
@@ -31,6 +31,10 @@ export default function ImageUploader({
   // Two separate hidden inputs — one for gallery (multiple), one for camera
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef  = useRef<HTMLInputElement>(null);
+  const videoRef        = useRef<HTMLVideoElement>(null);
+  const streamRef       = useRef<MediaStream | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraBusy, setCameraBusy] = useState(false);
 
   const {
     uploadFiles,
@@ -69,6 +73,98 @@ export default function ImageUploader({
 
   const hasFiles = uploadFiles.length > 0;
 
+  const stopCameraStream = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+  }, []);
+
+  const closeCamera = useCallback(() => {
+    stopCameraStream();
+    setCameraOpen(false);
+    setCameraBusy(false);
+  }, [stopCameraStream]);
+
+  const openCamera = useCallback(async () => {
+    if (disabled || uploading || !canAddMore) return;
+
+    // Mobile browsers usually honor capture attr and open camera directly.
+    const isMobileDevice =
+      typeof navigator !== "undefined" &&
+      /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+    if (isMobileDevice) {
+      cameraInputRef.current?.click();
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      cameraInputRef.current?.click();
+      return;
+    }
+
+    try {
+      setCameraBusy(true);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+      setCameraOpen(true);
+    } catch {
+      // Permission denied or camera unavailable — fallback to file input.
+      cameraInputRef.current?.click();
+    } finally {
+      setCameraBusy(false);
+    }
+  }, [canAddMore, disabled, uploading]);
+
+  const capturePhoto = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video || !streamRef.current) return;
+
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+    if (!width || !height) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, width, height);
+
+    canvas.toBlob(
+      async (blob) => {
+        if (!blob) return;
+        const file = new File([blob], `camera-${Date.now()}.jpg`, {
+          type: "image/jpeg",
+        });
+        await handleFilesAdded([file]);
+        closeCamera();
+      },
+      "image/jpeg",
+      0.9
+    );
+  }, [closeCamera, handleFilesAdded]);
+
+  useEffect(() => {
+    if (!cameraOpen || !videoRef.current || !streamRef.current) return;
+
+    const video = videoRef.current;
+    video.srcObject = streamRef.current;
+    void video.play().catch(() => {
+      closeCamera();
+    });
+  }, [cameraOpen, closeCamera]);
+
+  useEffect(() => {
+    return () => stopCameraStream();
+  }, [stopCameraStream]);
+
   return (
     <div className={cn("w-full space-y-3", className)}>
 
@@ -80,7 +176,7 @@ export default function ImageUploader({
             {/* Camera button */}
             <button
               type="button"
-              onClick={() => cameraInputRef.current?.click()}
+              onClick={openCamera}
               className={cn(
                 "flex items-center justify-center gap-2 px-4 py-3 rounded-xl",
                 "border-2 border-dashed border-primary-200 bg-primary-50/40",
@@ -88,9 +184,10 @@ export default function ImageUploader({
                 "hover:bg-primary-50 hover:border-primary-400 transition-all",
                 "focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-1"
               )}
+              disabled={cameraBusy}
             >
-              <Camera size={17} />
-              Take Photo
+              {cameraBusy ? <Loader2 size={17} className="animate-spin" /> : <Camera size={17} />}
+              {cameraBusy ? "Opening Camera..." : "Take Photo"}
             </button>
 
             {/* Gallery button */}
@@ -195,6 +292,53 @@ export default function ImageUploader({
         <p className="text-xs text-center text-gray-400">
           Maximum {maxFiles} images attached.
         </p>
+      )}
+
+      {/* Desktop Camera Modal */}
+      {cameraOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div className="w-full max-w-xl bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <p className="text-sm font-semibold text-gray-900">Take Photo</p>
+              <button
+                type="button"
+                onClick={closeCamera}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+                aria-label="Close camera"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-4">
+              <div className="rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center">
+                <video
+                  ref={videoRef}
+                  className="w-full h-full object-cover"
+                  playsInline
+                  muted
+                />
+              </div>
+
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeCamera}
+                  className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={capturePhoto}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700"
+                >
+                  Capture
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

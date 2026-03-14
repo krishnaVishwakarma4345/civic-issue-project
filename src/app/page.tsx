@@ -1,5 +1,6 @@
 import React          from "react";
 import Link           from "next/link";
+import { adminDb }    from "@/lib/firebase-admin/config";
 import {
   ArrowRight,
   MapPin,
@@ -106,6 +107,104 @@ const STATS = [
   { value: "2.3 days", label: "Avg Resolution" },
 ];
 
+export const dynamic = "force-dynamic";
+
+type LiveLandingStats = {
+  reportedIssues: number;
+  resolutionRate: number;
+  citiesCovered: number;
+  avgResolutionDays: number;
+};
+
+const extractCityFromAddress = (address: unknown): string | null => {
+  if (typeof address !== "string") return null;
+  const parts = address
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return null;
+  // Common pattern: "area, city, state" -> pick city.
+  const city = parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+  return city.toLowerCase();
+};
+
+const toMillis = (value: unknown): number | null => {
+  if (!value) return null;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string") {
+    const ms = Date.parse(value);
+    return Number.isFinite(ms) ? ms : null;
+  }
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "toDate" in value &&
+    typeof (value as { toDate?: unknown }).toDate === "function"
+  ) {
+    const date = (value as { toDate: () => Date }).toDate();
+    return date.getTime();
+  }
+  return null;
+};
+
+const getLiveLandingStats = async (): Promise<LiveLandingStats | null> => {
+  try {
+    const issuesCollection = adminDb.collection("issues");
+
+    const [totalSnap, resolvedCountSnap, issuesSnap] = await Promise.all([
+      issuesCollection.count().get(),
+      issuesCollection.where("status", "==", "resolved").count().get(),
+      issuesCollection.select("status", "location", "createdAt", "updatedAt").get(),
+    ]);
+
+    const totalIssues = totalSnap.data().count ?? 0;
+    const resolvedIssues = resolvedCountSnap.data().count ?? 0;
+
+    const citySet = new Set<string>();
+    let totalResolutionDays = 0;
+    let resolvedWithDates = 0;
+
+    issuesSnap.forEach((doc) => {
+      const data = doc.data() as {
+        status?: string;
+        location?: { address?: unknown };
+        createdAt?: unknown;
+        updatedAt?: unknown;
+      };
+
+      const city = extractCityFromAddress(data.location?.address);
+      if (city) citySet.add(city);
+
+      if (data.status !== "resolved") return;
+      const createdMs = toMillis(data.createdAt);
+      const updatedMs = toMillis(data.updatedAt);
+      if (createdMs === null || updatedMs === null || updatedMs < createdMs) return;
+
+      totalResolutionDays += (updatedMs - createdMs) / (1000 * 60 * 60 * 24);
+      resolvedWithDates += 1;
+    });
+
+    const resolutionRate = totalIssues > 0
+      ? Math.round((resolvedIssues / totalIssues) * 100)
+      : 0;
+
+    const avgResolutionDays = resolvedWithDates > 0
+      ? Number((totalResolutionDays / resolvedWithDates).toFixed(1))
+      : 0;
+
+    return {
+      reportedIssues: totalIssues,
+      resolutionRate,
+      citiesCovered: citySet.size,
+      avgResolutionDays,
+    };
+  } catch (error) {
+    console.error("[LandingPage] Failed to fetch live stats:", error);
+    return null;
+  }
+};
+
 const TESTIMONIALS = [
   {
     name:   "Priya Sharma",
@@ -132,7 +231,30 @@ const TESTIMONIALS = [
 
 // ─── Page ─────────────────────────────────────────────────────
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const liveStats = await getLiveLandingStats();
+  const stats = [
+    {
+      value:
+        liveStats !== null
+          ? liveStats.reportedIssues.toLocaleString("en-IN")
+          : STATS[0].value,
+      label: STATS[0].label,
+    },
+    {
+      value: liveStats !== null ? `${liveStats.resolutionRate}%` : STATS[1].value,
+      label: STATS[1].label,
+    },
+    {
+      value: liveStats !== null ? liveStats.citiesCovered.toLocaleString("en-IN") : STATS[2].value,
+      label: STATS[2].label,
+    },
+    {
+      value: liveStats !== null ? `${liveStats.avgResolutionDays} days` : STATS[3].value,
+      label: STATS[3].label,
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-white">
 
@@ -191,7 +313,7 @@ export default function LandingPage() {
             </div>
 
             {/* Heading */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
+            <h1 className="text-4xl sm:text-5xl lg:text-5xl font-extrabold text-gray-900 leading-tight mb-6">
               Report Civic Issues.{" "}
               <span className="text-primary-600">
                 Drive Real Change.
@@ -213,12 +335,12 @@ export default function LandingPage() {
                   size="lg"
                   rightIcon={<ArrowRight size={18} />}
                 >
-                  Start Reporting Free
+                  Sign up
                 </Button>
               </Link>
               <Link href="/login">
                 <Button variant="secondary" size="lg">
-                  Sign In to Dashboard
+                  Login to your account
                 </Button>
               </Link>
             </div>
@@ -246,7 +368,7 @@ export default function LandingPage() {
       <section className="bg-primary-600 py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            {STATS.map((stat) => (
+            {stats.map((stat) => (
               <div key={stat.label}>
                 <p className="text-3xl font-extrabold text-white">{stat.value}</p>
                 <p className="text-primary-200 text-sm font-medium mt-1">{stat.label}</p>

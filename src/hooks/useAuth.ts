@@ -78,7 +78,7 @@ export const useAuth = () => {
         ) {
           router.push("/admin/dashboard");
         } else {
-          router.push("/dashboard");
+          router.push("/report-issue");
         }
 
         return true;
