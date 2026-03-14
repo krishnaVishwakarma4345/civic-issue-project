@@ -7,7 +7,7 @@ import { useRouter }         from "next/navigation";
 import { usePathname }       from "next/navigation";
 import {
   LayoutDashboard, ListFilter, BarChart3,
-  LogOut, ChevronRight, ChevronLeft, Shield, UserCircle,
+  LogOut, ChevronRight, ChevronLeft, Shield, UserCircle, Users,
 } from "lucide-react";
 import { useAuthContext } from "@/context/AuthContext";
 import { useAuthStore }   from "@/store/authStore";
@@ -49,7 +49,21 @@ export default function AdminSidebar() {
     } catch { toast.error("Logout failed. Please try again."); }
   };
 
-  const sections = ADMIN_LINKS.reduce<Record<string, AdminNavLink[]>>((acc, link) => {
+  const adminLinks: AdminNavLink[] = [
+    ...ADMIN_LINKS,
+    ...(userData?.role === "master-admin"
+      ? [
+          {
+            href: "/admin/user-role",
+            label: "Change User Role",
+            icon: <Users size={18} />,
+            section: "Account",
+          },
+        ]
+      : []),
+  ];
+
+  const sections = adminLinks.reduce<Record<string, AdminNavLink[]>>((acc, link) => {
     const key = link.section ?? "Other";
     if (!acc[key]) acc[key] = [];
     acc[key].push(link);

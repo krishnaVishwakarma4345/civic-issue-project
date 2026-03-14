@@ -277,7 +277,7 @@ export default async function LandingPage() {
               <a href="#features"      className="hover:text-primary-600 transition-colors">Features</a>
               <a href="#how-it-works"  className="hover:text-primary-600 transition-colors">How It Works</a>
               <a href="#categories"    className="hover:text-primary-600 transition-colors">Categories</a>
-              <a href="#testimonials"  className="hover:text-primary-600 transition-colors">Reviews</a>
+              {/* <a href="#testimonials"  className="hover:text-primary-600 transition-colors">Reviews</a> */}
             </nav>
 
             {/* CTA */}
@@ -365,7 +365,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ─── Stats Bar ────────────────────────────────────── */}
-      <section className="bg-primary-600 py-10">
+      <section className="bg-primary-500 py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             {stats.map((stat) => (
@@ -481,7 +481,7 @@ export default async function LandingPage() {
       
 
       {/* ─── CTA Banner ───────────────────────────────────── */}
-      <section className="py-20 bg-primary-600">
+      <section className="py-20 bg-primary-500">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
             Ready to Make Your City Better?
