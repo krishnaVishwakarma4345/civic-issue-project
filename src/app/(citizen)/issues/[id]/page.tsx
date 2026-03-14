@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   ExternalLink,
   RefreshCw,
+  Mic,
 } from "lucide-react";
 import { subscribeToIssue }   from "@/lib/firebase/firestore";
 import { useAuthContext }     from "@/context/AuthContext";
@@ -142,6 +143,24 @@ export default function IssueDetailPage() {
         <p className="text-sm text-gray-700 leading-relaxed mb-5">
           {issue.description}
         </p>
+
+        {/* Audio Description */}
+        {issue.audioUrl && (
+          <div className="mb-5 p-3 rounded-xl bg-gray-50 border border-gray-100">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                <Mic size={15} className="text-red-500" />
+              </div>
+              <p className="text-xs font-semibold text-gray-700">Audio Description</p>
+            </div>
+            <audio
+              src={issue.audioUrl}
+              controls
+              className="w-full h-10"
+              preload="metadata"
+            />
+          </div>
+        )}
 
         {/* Meta Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-100">

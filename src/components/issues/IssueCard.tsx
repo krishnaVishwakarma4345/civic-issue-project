@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, Clock, Image as ImageIcon } from "lucide-react";
+import { MapPin, Clock, Image as ImageIcon, Mic } from "lucide-react";
 import { Issue } from "@/types/issue";
 import { getCategoryMeta } from "@/lib/constants/categories";
 import { formatRelativeTime, truncate } from "@/lib/utils/formatters";
@@ -85,6 +85,11 @@ export default function IssueCard({
             <span className="flex items-center gap-1">
               <ImageIcon size={12} />
               {issue.images.length}
+            </span>
+          )}
+          {issue.audioUrl && (
+            <span className="flex items-center gap-1" title="Audio attached">
+              <Mic size={12} />
             </span>
           )}
           <span className="flex items-center gap-1">
