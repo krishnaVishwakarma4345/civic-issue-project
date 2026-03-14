@@ -162,11 +162,16 @@ export const useAdminIssues = () => {
           throw new Error(data.error ?? "Update failed");
         }
 
+        const json = await res.json();
+        const updatedIssue = json.data as { [key: string]: unknown };
+
         // Optimistically update store
         updateIssue(payload.id, {
-          ...(payload.status             && { status:             payload.status }),
+          ...updatedIssue,
+          ...(payload.status && { status: payload.status }),
           ...(payload.assignedDepartment && { assignedDepartment: payload.assignedDepartment }),
-          ...(payload.adminRemarks       && { adminRemarks:       payload.adminRemarks }),
+          ...(payload.adminRemarks && { adminRemarks: payload.adminRemarks }),
+          ...(payload.resolvedImageUrl && { resolvedImageUrl: payload.resolvedImageUrl }),
           updatedAt: new Date().toISOString(),
         });
 

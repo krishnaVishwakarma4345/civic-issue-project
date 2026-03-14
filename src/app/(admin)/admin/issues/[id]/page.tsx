@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Save,
   Mic,
+  ImageIcon,
 } from "lucide-react";
 import { getIdToken }          from "@/lib/firebase/auth";
 import { useAuthContext }      from "@/context/AuthContext";
@@ -24,6 +25,7 @@ import Button                  from "@/components/ui/Button";
 import Select                  from "@/components/ui/Select";
 import Textarea                from "@/components/ui/Textarea";
 import Alert                   from "@/components/ui/Alert";
+import ImageUploader           from "@/components/issues/ImageUploader";
 import IssueStatusBadge        from "@/components/issues/IssueStatusBadge";
 import IssuePriorityBadge      from "@/components/issues/IssuePriorityBadge";
 import IssueTimeline           from "@/components/issues/IssueTimeline";
@@ -59,6 +61,8 @@ export default function AdminIssueDetailPage() {
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [resolvedImageUrl, setResolvedImageUrl] = useState<string | null>(null);
 
   const {
     register,
@@ -93,6 +97,7 @@ export default function AdminIssueDetailPage() {
         const json = await res.json();
         const updated = json.data as Issue;
         setIssue(updated);
+        setResolvedImageUrl(updated.resolvedImageUrl ?? null);
         setValue("assignedDepartment", updated.assignedDepartment ?? "");
         setValue("adminRemarks", updated.adminRemarks ?? "");
       } catch (err) {
@@ -111,6 +116,7 @@ export default function AdminIssueDetailPage() {
     async (data: UpdateIssueFormData) => {
       if (!issue) return;
       setSaveSuccess(false);
+      setActionError(null);
 
       const success = await updateIssueStatus({
         id:                 issue.id,
@@ -131,15 +137,33 @@ export default function AdminIssueDetailPage() {
     async (newStatus: IssueStatus) => {
       if (!issue) return;
       setSaveSuccess(false);
+      setActionError(null);
+
+      if (newStatus === "resolved" && !resolvedImageUrl && !issue.resolvedImageUrl) {
+        setActionError("Upload a photo of the resolved site before marking this issue as resolved.");
+        return;
+      }
 
       const success = await updateIssueStatus({
         id:     issue.id,
         status: newStatus,
+        ...(newStatus === "resolved" && (resolvedImageUrl || issue.resolvedImageUrl)
+          ? { resolvedImageUrl: resolvedImageUrl ?? issue.resolvedImageUrl }
+          : {}),
       });
 
-      if (success) setSaveSuccess(true);
+      if (success) {
+        setSaveSuccess(true);
+        setIssue((prev) => prev
+          ? {
+              ...prev,
+              status: newStatus,
+              resolvedImageUrl: resolvedImageUrl ?? prev.resolvedImageUrl,
+            }
+          : prev);
+      }
     },
-    [issue, updateIssueStatus]
+    [issue, resolvedImageUrl, updateIssueStatus]
   );
 
   // ─── Render ───────────────────────────────────────────────
@@ -203,6 +227,16 @@ export default function AdminIssueDetailPage() {
           onDismiss={() => setSaveSuccess(false)}
         >
           Changes have been saved successfully.
+        </Alert>
+      )}
+
+      {actionError && (
+        <Alert
+          variant="error"
+          title="Action required"
+          onDismiss={() => setActionError(null)}
+        >
+          {actionError}
         </Alert>
       )}
 
@@ -322,6 +356,32 @@ export default function AdminIssueDetailPage() {
               </div>
             </Card>
           )}
+
+          {issue.resolvedImageUrl && (
+            <Card>
+              <p className="section-title mb-4">Resolved Site Photo</p>
+              <a
+                href={issue.resolvedImageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="relative block aspect-video rounded-xl overflow-hidden bg-gray-100 group"
+              >
+                <Image
+                  src={issue.resolvedImageUrl}
+                  alt="Resolved site"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  sizes="(max-width: 1024px) 100vw, 66vw"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                  <ExternalLink
+                    size={18}
+                    className="text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  />
+                </div>
+              </a>
+            </Card>
+          )}
         </div>
 
         {/* ─── Right Column (Management Panel) ─────────── */}
@@ -343,14 +403,67 @@ export default function AdminIssueDetailPage() {
                 changes are available.
               </Alert>
             ) : !isMasterAdmin ? (
-              <div className="space-y-2">
+              <div className="space-y-4">
+                {(allowedTransitions.includes("resolved") || issue.resolvedImageUrl) && (
+                  <div className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon size={15} className="text-primary-600" />
+                      <p className="text-sm font-semibold text-gray-900">Resolved Site Image</p>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Upload a photo of the fixed site before marking this issue as resolved.
+                    </p>
+
+                    {!issue.resolvedImageUrl && (
+                      <ImageUploader
+                        maxFiles={1}
+                        disabled={submitting}
+                        onUploadComplete={(urls) => {
+                          if (urls[0]) {
+                            setResolvedImageUrl(urls[0]);
+                            setActionError(null);
+                          }
+                        }}
+                      />
+                    )}
+
+                    {(resolvedImageUrl || issue.resolvedImageUrl) && (
+                      <a
+                        href={resolvedImageUrl ?? issue.resolvedImageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="relative block aspect-video rounded-xl overflow-hidden bg-gray-100 group"
+                      >
+                        <Image
+                          src={resolvedImageUrl ?? issue.resolvedImageUrl ?? ""}
+                          alt="Resolved site preview"
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          sizes="(max-width: 1024px) 100vw, 33vw"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                          <ExternalLink
+                            size={16}
+                            className="text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          />
+                        </div>
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                <div className="space-y-2">
                 {allowedTransitions.map((nextStatus) => {
                   const meta = getStatusMeta(nextStatus);
+                  const resolveBlocked =
+                    nextStatus === "resolved" &&
+                    !resolvedImageUrl &&
+                    !issue.resolvedImageUrl;
                   return (
                     <button
                       key={nextStatus}
                       onClick={() => handleStatusChange(nextStatus)}
-                      disabled={submitting}
+                      disabled={submitting || resolveBlocked}
                       className={`w-full flex items-center gap-3 p-3 rounded-xl border-2
                         border-dashed transition-all duration-200
                         ${meta.bgColor} ${meta.borderColor}
@@ -363,7 +476,7 @@ export default function AdminIssueDetailPage() {
                           Mark as {meta.label}
                         </p>
                         <p className="text-xs text-gray-500 mt-0.5">
-                          {meta.description}
+                          {resolveBlocked ? "Upload resolved-site photo first." : meta.description}
                         </p>
                       </div>
                       {submitting ? (
@@ -374,6 +487,7 @@ export default function AdminIssueDetailPage() {
                     </button>
                   );
                 })}
+                </div>
               </div>
             ) : null}
           </Card>

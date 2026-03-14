@@ -67,6 +67,7 @@ export const updateIssueSchema = z.object({
     .string()
     .max(500, "Remarks must be less than 500 characters")
     .optional(),
+  resolvedImageUrl: z.string().url("Resolved image must be a valid URL").optional(),
 });
 
 // ─── Type Exports ────────────────────────────────────────────

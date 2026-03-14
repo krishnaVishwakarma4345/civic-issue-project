@@ -48,6 +48,8 @@ const docToIssue = (
     id:        docSnap.id,
     images:    Array.isArray(data.images) ? data.images : [],
     audioUrl:  typeof data.audioUrl === "string" ? data.audioUrl : undefined,
+    resolvedImageUrl:
+      typeof data.resolvedImageUrl === "string" ? data.resolvedImageUrl : undefined,
     location:  data.location ?? { latitude: 0, longitude: 0, address: "" },
     createdAt: data.createdAt?.toDate?.()?.toISOString() ?? data.createdAt,
     updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? data.updatedAt,
@@ -112,6 +114,7 @@ export const createIssue = async (
     status:             "reported",
     images:             payload.images ?? [],
     audioUrl:           payload.audioUrl ?? null,
+    resolvedImageUrl:   null,
     assignedDepartment: null,
     adminRemarks:       null,
     createdAt:          serverTimestamp(),

@@ -13,6 +13,7 @@ import {
   ExternalLink,
   RefreshCw,
   Mic,
+  CheckCircle2,
 } from "lucide-react";
 import { subscribeToIssue }   from "@/lib/firebase/firestore";
 import { useAuthContext }     from "@/context/AuthContext";
@@ -206,7 +207,7 @@ export default function IssueDetailPage() {
       </Card>
 
       {/* ─── Department & Remarks ────────────────────────── */}
-      {(issue.assignedDepartment || issue.adminRemarks) && (
+      {(issue.assignedDepartment || issue.adminRemarks || issue.resolvedImageUrl) && (
         <Card>
           <p className="section-title mb-4">Authority Response</p>
 
@@ -243,6 +244,39 @@ export default function IssueDetailPage() {
                 <p className="text-sm text-gray-800 mt-0.5 leading-relaxed">
                   {issue.adminRemarks}
                 </p>
+              </div>
+            </div>
+          )}
+
+          {issue.resolvedImageUrl && (
+            <div className="flex items-start gap-3 mt-4">
+              <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                <CheckCircle2 size={16} className="text-emerald-600" />
+              </div>
+              <div className="w-full">
+                <p className="text-xs font-medium text-gray-500 mb-2">
+                  Resolved Site Photo
+                </p>
+                <a
+                  href={issue.resolvedImageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative block aspect-video rounded-xl overflow-hidden bg-gray-100 group"
+                >
+                  <Image
+                    src={issue.resolvedImageUrl}
+                    alt="Resolved site"
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                    <ExternalLink
+                      size={18}
+                      className="text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    />
+                  </div>
+                </a>
               </div>
             </div>
           )}

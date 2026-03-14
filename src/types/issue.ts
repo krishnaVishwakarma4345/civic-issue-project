@@ -29,6 +29,7 @@ export interface Issue {
   location: IssueLocation;
   images: string[];
   audioUrl?: string;
+  resolvedImageUrl?: string;
   citizenId: string;
   citizenName?: string;
   citizenEmail?: string;
@@ -54,6 +55,7 @@ export interface UpdateIssuePayload {
   assignedDepartment?: string;
   adminRemarks?: string;
   priority?: IssuePriority;
+  resolvedImageUrl?: string;
 }
 
 export interface IssueFilters {

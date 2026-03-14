@@ -32,6 +32,7 @@ const adminUpdateSchema = z.object({
     .optional()
     .nullable(),
   priority: z.enum(["low", "medium", "high"]).optional(),
+  resolvedImageUrl: z.string().url().optional().nullable(),
 });
 
 // What citizen can update (only images)
@@ -137,6 +138,16 @@ export async function PATCH(req: NextRequest) {
       if (!allowed.includes(nextStatus)) {
         return validationErrorResponse(
           `Cannot transition issue from "${currentStatus}" to "${nextStatus}".`
+        );
+      }
+
+      if (
+        nextStatus === "resolved" &&
+        !updateData.resolvedImageUrl &&
+        !existingData.resolvedImageUrl
+      ) {
+        return validationErrorResponse(
+          "Resolved site image is required before marking an issue as resolved."
         );
       }
     }
