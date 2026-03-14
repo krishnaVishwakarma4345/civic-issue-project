@@ -8,7 +8,7 @@ import { ApiResponse } from "@/types/api";
 export const validateBody = async <T>(
   request: Request,
   schema: ZodSchema<T>
-): Promise
+): Promise<
   | { success: true; data: T }
   | { success: false; response: NextResponse<ApiResponse<never>> }
 > => {

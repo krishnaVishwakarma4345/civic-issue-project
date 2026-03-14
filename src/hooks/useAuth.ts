@@ -72,7 +72,10 @@ export const useAuth = () => {
         toast.success(`Welcome back, ${loggedInUser.name}!`);
 
         // Role-based redirect
-        if (loggedInUser.role === "admin") {
+        if (
+          loggedInUser.role === "department-admin" ||
+          loggedInUser.role === "master-admin"
+        ) {
           router.push("/admin/dashboard");
         } else {
           router.push("/dashboard");

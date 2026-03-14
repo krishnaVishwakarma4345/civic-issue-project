@@ -57,6 +57,12 @@ export default function AdminSidebar() {
   }, {});
 
   const displayName = userData?.name ?? "Admin";
+  const adminRoleLabel =
+    userData?.role === "master-admin"
+      ? "Master Admin"
+      : userData?.adminCategory
+        ? `${userData.adminCategory} Admin`
+        : "Department Admin";
 
   return (
     <aside className={cn(
@@ -143,7 +149,7 @@ export default function AdminSidebar() {
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white truncate">{displayName}</p>
-              <p className="text-xs text-primary-400 font-medium">Administrator</p>
+              <p className="text-xs text-primary-400 font-medium capitalize">{adminRoleLabel}</p>
             </div>
           )}
         </Link>

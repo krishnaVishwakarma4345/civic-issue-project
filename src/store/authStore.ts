@@ -50,6 +50,7 @@ export const useAuthStore = create<AuthState>()(
                 name:  state.userData.name,
                 email: state.userData.email,
                 role:  state.userData.role,
+                adminCategory: state.userData.adminCategory,
               }
             : null,
         }),

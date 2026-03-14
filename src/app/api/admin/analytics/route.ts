@@ -5,29 +5,49 @@ import {
   successResponse,
   serverErrorResponse,
   parseAuthError,
+  forbiddenResponse,
 } from "@/app/api/_lib/apiResponse";
 import { AnalyticsSummary, CategoryCount, MonthlyTrend, StatusDistribution, PriorityDistribution } from "@/types/analytics";
 import { format, subMonths, parseISO, isValid } from "date-fns";
+
+type AdminAnalyticsIssue = {
+  id: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  status?: string;
+  category?: string;
+  priority?: string;
+};
 
 // ─── GET /api/admin/analytics ─────────────────────────────────
 
 export async function GET(req: NextRequest) {
   // 1. Require admin role
+  let user;
   try {
-    await requireAdmin(req);
+    user = await requireAdmin(req);
   } catch (err) {
     return parseAuthError(err);
   }
 
+  const scopedCategory =
+    user.role === "department-admin" ? user.adminCategory : undefined;
+
+  if (user.role === "department-admin" && !scopedCategory) {
+    return forbiddenResponse("Your admin category is not assigned.");
+  }
+
   try {
     // 2. Fetch all issues (up to 1000 for analytics)
-    const snap = await adminDb
-      .collection("issues")
-      .orderBy("createdAt", "desc")
-      .limit(1000)
-      .get();
+    let query = adminDb.collection("issues") as FirebaseFirestore.Query;
 
-    const issues = snap.docs.map((doc) => {
+    if (scopedCategory) {
+      query = query.where("category", "==", scopedCategory);
+    }
+
+    const snap = await query.orderBy("createdAt", "desc").limit(1000).get();
+
+    const issues: AdminAnalyticsIssue[] = snap.docs.map((doc) => {
       const data = doc.data();
       return {
         ...data,
@@ -61,6 +81,7 @@ export async function GET(req: NextRequest) {
     let avgResolutionDays = 0;
     if (resolvedWithDates.length > 0) {
       const totalDays = resolvedWithDates.reduce((sum, issue) => {
+        if (!issue.createdAt || !issue.updatedAt) return sum;
         try {
           const created  = new Date(issue.createdAt).getTime();
           const resolved = new Date(issue.updatedAt).getTime();

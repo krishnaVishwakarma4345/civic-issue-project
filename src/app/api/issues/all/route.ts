@@ -6,6 +6,7 @@ import {
   successResponse,
   serverErrorResponse,
   parseAuthError,
+  forbiddenResponse,
 } from "@/app/api/_lib/apiResponse";
 import { getQueryParams } from "@/app/api/_lib/apiValidation";
 import {
@@ -56,9 +57,19 @@ export async function GET(req: NextRequest) {
     if (user.role === "citizen") {
       q = q.where("citizenId", "==", user.uid);
     }
+    if (user.role === "department-admin") {
+      if (!user.adminCategory) {
+        return forbiddenResponse("Your admin category is not assigned.");
+      }
+      q = q.where("category", "==", user.adminCategory);
+    }
 
     // ─── Filters ──────────────────────────────────────────
-    if (params.category && params.category !== "all") {
+    if (
+      params.category &&
+      params.category !== "all" &&
+      user.role !== "department-admin"
+    ) {
       q = q.where("category", "==", params.category);
     }
     if (params.status && params.status !== "all") {

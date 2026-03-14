@@ -301,7 +301,11 @@ function ProfileDropdown({
       {/* Menu Items */}
       <div className="py-1">
         <Link
-          href={role === "admin" ? "/admin/dashboard" : "/dashboard"}
+          href={
+            role === "department-admin" || role === "master-admin"
+              ? "/admin/dashboard"
+              : "/dashboard"
+          }
           className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
         >
           <LayoutDashboard size={15} className="text-gray-400" />

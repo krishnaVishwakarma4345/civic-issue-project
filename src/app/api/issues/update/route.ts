@@ -62,8 +62,15 @@ export async function PATCH(req: NextRequest) {
   // 3. Validate by role
   let updateData: Record<string, unknown> = {};
   let issueId: string;
+  const isDepartmentAdmin = user.role === "department-admin";
+  const isMasterAdmin = user.role === "master-admin";
+  const isCitizen = user.role === "citizen";
 
-  if (user.role === "admin") {
+  if (isDepartmentAdmin || isMasterAdmin) {
+    if (isMasterAdmin) {
+      return forbiddenResponse("Master admin is read-only and cannot modify issues.");
+    }
+
     const result = adminUpdateSchema.safeParse(body);
     if (!result.success) {
       const msg = result.error.errors[0]?.message ?? "Validation failed.";
@@ -101,12 +108,21 @@ export async function PATCH(req: NextRequest) {
     const existingData = docSnap.data()!;
 
     // Citizens can only update their own issues
-    if (user.role === "citizen" && existingData.citizenId !== user.uid) {
+    if (isCitizen && existingData.citizenId !== user.uid) {
       return forbiddenResponse("You cannot modify this issue.");
     }
 
+    if (isDepartmentAdmin) {
+      if (!user.adminCategory) {
+        return forbiddenResponse("Your admin category is not assigned.");
+      }
+      if (existingData.category !== user.adminCategory) {
+        return forbiddenResponse("You can only modify issues in your assigned category.");
+      }
+    }
+
     // ─── Status transition validation ─────────────────────
-    if (updateData.status && user.role === "admin") {
+    if (updateData.status && isDepartmentAdmin) {
       const validTransitions: Record<string, string[]> = {
         reported:    ["assigned"],
         assigned:    ["in-progress"],

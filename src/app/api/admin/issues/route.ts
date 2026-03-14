@@ -5,6 +5,7 @@ import {
   successResponse,
   serverErrorResponse,
   parseAuthError,
+  forbiddenResponse,
 } from "@/app/api/_lib/apiResponse";
 import { getQueryParams } from "@/app/api/_lib/apiValidation";
 import {
@@ -24,8 +25,9 @@ type AdminIssueListItem = DocumentData & {
 // ─── GET /api/admin/issues — Paginated + filtered ─────────────
 
 export async function GET(req: NextRequest) {
+  let user;
   try {
-    await requireAdmin(req);
+    user = await requireAdmin(req);
   } catch (err) {
     return parseAuthError(err);
   }
@@ -44,7 +46,18 @@ export async function GET(req: NextRequest) {
 
     let q: Query<DocumentData> = issuesRef;
 
-    if (params.category && params.category !== "all") {
+    const scopedCategory =
+      user.role === "department-admin" ? user.adminCategory : undefined;
+
+    if (user.role === "department-admin" && !scopedCategory) {
+      return forbiddenResponse("Your admin category is not assigned.");
+    }
+
+    if (scopedCategory) {
+      q = q.where("category", "==", scopedCategory);
+    }
+
+    if (params.category && params.category !== "all" && !scopedCategory) {
       q = q.where("category", "==", params.category);
     }
     if (params.status && params.status !== "all") {

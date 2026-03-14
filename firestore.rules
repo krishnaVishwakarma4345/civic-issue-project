@@ -11,19 +11,42 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    function isAdmin() {
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isMasterAdmin() {
       return isAuthenticated() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        userDoc().role == 'master-admin';
+    }
+
+    function isDepartmentAdmin() {
+      return isAuthenticated() &&
+        userDoc().role == 'department-admin';
+    }
+
+    function isAnyAdmin() {
+      return isMasterAdmin() || isDepartmentAdmin();
+    }
+
+    function departmentCategory() {
+      return userDoc().adminCategory;
+    }
+
+    function canReadIssueByRole() {
+      return resource.data.citizenId == request.auth.uid ||
+        isMasterAdmin() ||
+        (isDepartmentAdmin() && resource.data.category == departmentCategory());
     }
 
     function isValidRole(role) {
-      return role == 'citizen' || role == 'admin';
+      return role == 'citizen' || role == 'department-admin' || role == 'master-admin';
     }
 
     // ─── Users Collection ─────────────────────────────────────
     match /users/{userId} {
       // Read: own doc or admin
-      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow read: if isAuthenticated() && (isOwner(userId) || isAnyAdmin());
 
       // Create: only own document, role must be citizen
       allow create: if isAuthenticated() &&
@@ -45,7 +68,7 @@ service cloud.firestore {
     match /issues/{issueId} {
       // Read: own issues or admin
       allow read: if isAuthenticated() &&
-        (resource.data.citizenId == request.auth.uid || isAdmin());
+        canReadIssueByRole();
 
       // Create: authenticated citizens only
       allow create: if isAuthenticated() &&
@@ -60,13 +83,17 @@ service cloud.firestore {
 
       // Update: admin can update all fields, citizen can only update images
       allow update: if isAuthenticated() && (
-        isAdmin() ||
+        (
+          isDepartmentAdmin() &&
+          resource.data.category == departmentCategory()
+        ) ||
         (resource.data.citizenId == request.auth.uid &&
          request.resource.data.status == resource.data.status)
       );
 
       // Delete: admin only
-      allow delete: if isAdmin();
+      allow delete: if isDepartmentAdmin() &&
+        resource.data.category == departmentCategory();
     }
 
     // ─── Deny everything else ─────────────────────────────────

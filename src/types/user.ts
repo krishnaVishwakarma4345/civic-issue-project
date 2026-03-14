@@ -1,6 +1,8 @@
 // src/types/user.ts
 
-export type UserRole = "citizen" | "admin";
+import type { IssueCategory } from "@/types/issue";
+
+export type UserRole = "citizen" | "department-admin" | "master-admin";
 
 export interface User {
   uid:       string;
@@ -22,6 +24,9 @@ export interface User {
   state?:         string;
   pincode?:       string;
   bio?:           string;
+
+  // Admin scope (used when role = "department-admin")
+  adminCategory?: IssueCategory;
 }
 
 // ── Kept exactly as-is from your original file ────────────────

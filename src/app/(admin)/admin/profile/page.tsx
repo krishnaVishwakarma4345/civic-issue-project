@@ -302,7 +302,9 @@ export default function AdminProfilePage() {
               <h2 className="text-xl font-bold text-white">{userData.name}</h2>
               <span className="px-2 py-0.5 rounded-full text-xs font-semibold
                                bg-primary-500/20 text-primary-400 border border-primary-500/30">
-                Administrator
+                {userData.role === "master-admin"
+                  ? "Master Admin"
+                  : `${userData.adminCategory ?? "Department"} Admin`}
               </span>
               <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs
                                font-medium bg-green-500/10 text-green-400 border border-green-500/20">
@@ -393,7 +395,11 @@ export default function AdminProfilePage() {
         <StatCard
           icon={<Shield size={18} className="text-green-400" />}
           label="Role"
-          value="Admin"
+          value={
+            userData.role === "master-admin"
+              ? "Master Admin"
+              : `${userData.adminCategory ?? "Department"} Admin`
+          }
           color="bg-green-500/10"
         />
         <StatCard
@@ -492,7 +498,15 @@ export default function AdminProfilePage() {
       <SectionCard title="Account Information" icon={<Shield size={16} />}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ReadonlyField label="Email Address"   value={userData.email}      icon={<Mail size={15} />} />
-          <ReadonlyField label="Account Role"    value="Administrator"       icon={<Shield size={15} />} />
+          <ReadonlyField
+            label="Account Role"
+            value={
+              userData.role === "master-admin"
+                ? "Master Admin"
+                : `${userData.adminCategory ?? "Department"} Admin`
+            }
+            icon={<Shield size={15} />}
+          />
           <ReadonlyField label="Member Since"    value={formatDateTime(userData.createdAt)} icon={<Calendar size={15} />} />
           <ReadonlyField label="User ID"         value={userData.uid}        icon={<FileText size={15} />} />
         </div>

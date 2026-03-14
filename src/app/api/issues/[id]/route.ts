@@ -43,6 +43,15 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return forbiddenResponse("You do not have access to this issue.");
     }
 
+    if (user.role === "department-admin") {
+      if (!user.adminCategory) {
+        return forbiddenResponse("Your admin category is not assigned.");
+      }
+      if (data.category !== user.adminCategory) {
+        return forbiddenResponse("You do not have access to this category.");
+      }
+    }
+
     const issue = {
       ...data,
       id:        docSnap.id,
@@ -67,8 +76,12 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     return parseAuthError(err);
   }
 
-  if (user.role !== "admin") {
-    return forbiddenResponse("Only admins can delete issues.");
+  if (user.role === "master-admin") {
+    return forbiddenResponse("Master admin is read-only and cannot delete issues.");
+  }
+
+  if (user.role !== "department-admin") {
+    return forbiddenResponse("Only department admins can delete issues.");
   }
 
   const { id } = params;
@@ -80,6 +93,16 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 
     if (!docSnap.exists) {
       return notFoundResponse(`Issue with ID "${id}" not found.`);
+    }
+
+    const data = docSnap.data()!;
+
+    if (!user.adminCategory) {
+      return forbiddenResponse("Your admin category is not assigned.");
+    }
+
+    if (data.category !== user.adminCategory) {
+      return forbiddenResponse("You cannot delete issues outside your category.");
     }
 
     await docRef.delete();

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getIdToken } from "@/lib/firebase/auth";
 import { getIssuesForAnalytics } from "@/lib/firebase/firestore";
+import { useAuthContext } from "@/context/AuthContext";
 import { AnalyticsSummary } from "@/types/analytics";
 import type { Issue } from "@/types/issue";
 import { format, subMonths, parseISO, isValid } from "date-fns";
@@ -14,6 +15,7 @@ interface UseAnalyticsState {
 }
 
 export const useAnalytics = () => {
+  const { userData } = useAuthContext();
   const [state, setState] = useState<UseAnalyticsState>({
     data:    null,
     loading: true,
@@ -23,37 +25,45 @@ export const useAnalytics = () => {
   const fetchAnalytics = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
+    // 1. Try the server-side API (requires Firebase Admin SDK to be configured).
     try {
       const token = await getIdToken(true);
-      const res   = await fetch("/api/admin/analytics", {
-        headers: { "Authorization": `Bearer ${token}` },
-        // Revalidate every 5 minutes
-        next: { revalidate: 300 },
-      } as RequestInit);
+      const res = await fetch("/api/admin/analytics", {
+        headers: { "Authorization": `Bearer ${token ?? ""}` },
+      });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Failed to fetch analytics");
+      if (res.ok) {
+        const json = await res.json();
+        setState({ data: json.data, loading: false, error: null });
+        return;
       }
-
-      const json = await res.json();
-      setState({ data: json.data, loading: false, error: null });
-    } catch (err) {
-      try {
-        // Fallback: build analytics from client-side Firestore query so
-        // admin dashboard still works when server admin credentials/env differ.
-        const issues = await getIssuesForAnalytics();
-        const summary = buildAnalyticsSummary(issues);
-        setState({ data: summary, loading: false, error: null });
-      } catch {
-        setState({
-          data:    null,
-          loading: false,
-          error:   err instanceof Error ? err.message : "Failed to load analytics",
-        });
-      }
+      // Non-2xx (e.g. 401 when Firebase Admin key is not configured): fall through.
+      console.warn("[useAnalytics] API returned non-OK, falling back to Firestore.");
+    } catch {
+      // Network error — fall through to Firestore fallback.
+      console.warn("[useAnalytics] API unreachable, falling back to Firestore.");
     }
-  }, []);
+
+    // 2. Client-side Firestore fallback — works once Firestore rules are deployed.
+    // Guard: only fetch once userData has loaded (avoid unscoped query for dept admins).
+    if (!userData) {
+      setState({ data: null, loading: false, error: "Not authenticated." });
+      return;
+    }
+    try {
+      const scopedCategory =
+        userData.role === "department-admin" ? userData.adminCategory : undefined;
+      const issues = await getIssuesForAnalytics(scopedCategory);
+      const summary = buildAnalyticsSummary(issues);
+      setState({ data: summary, loading: false, error: null });
+    } catch (fallbackErr) {
+      setState({
+        data:    null,
+        loading: false,
+        error:   fallbackErr instanceof Error ? fallbackErr.message : "Failed to load analytics",
+      });
+    }
+  }, [userData?.role, userData?.adminCategory]);
 
   useEffect(() => {
     fetchAnalytics();

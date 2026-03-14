@@ -12,12 +12,23 @@ import { adminAuth }      from "@/lib/firebase-admin/config";
 
 // ─── Schema ───────────────────────────────────────────────────
 
-const registerSchema = z.object({
-  uid:   z.string().min(1),
-  name:  z.string().min(2).max(50),
-  email: z.string().email(),
-  role:  z.enum(["citizen", "admin"]).default("citizen"),
-});
+const registerSchema = z
+  .object({
+    uid:   z.string().min(1),
+    name:  z.string().min(2).max(50),
+    email: z.string().email(),
+    role:  z.enum(["citizen", "department-admin", "master-admin"]).default("citizen"),
+    adminCategory: z.enum(["road", "garbage", "water", "streetlight", "sanitation"]).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.role === "department-admin" && !data.adminCategory) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["adminCategory"],
+        message: "adminCategory is required for department-admin.",
+      });
+    }
+  });
 
 // ─── POST /api/auth/register ──────────────────────────────────
 
@@ -33,7 +44,7 @@ export async function POST(req: NextRequest) {
   const validation = await validateBody(req, registerSchema);
   if (!validation.success) return validation.response;
 
-  const { uid, name, email, role } = validation.data;
+  const { uid, name, email, role, adminCategory } = validation.data;
 
   try {
     // Verify uid actually exists in Firebase Auth
@@ -45,11 +56,14 @@ export async function POST(req: NextRequest) {
       name,
       email,
       role,
+      ...(role === "department-admin" && adminCategory
+        ? { adminCategory }
+        : {}),
       createdAt: new Date().toISOString(),
     });
 
     return successResponse(
-      { uid, name, email, role },
+      { uid, name, email, role, adminCategory: adminCategory ?? null },
       "User registered successfully.",
       201
     );

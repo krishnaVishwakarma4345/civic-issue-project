@@ -1,6 +1,7 @@
 import { adminAuth, adminDb } from "./config";
 import { DecodedIdToken } from "firebase-admin/auth";
 import { User } from "@/types/user";
+import { IssueCategory } from "@/types/issue";
 
 // ─── Verify ID Token ─────────────────────────────────────────
 
@@ -38,7 +39,9 @@ export const getUserFromToken = async (
       name:      data.name,
       email:     data.email,
       role:      data.role,
+      adminCategory: data.adminCategory,
       createdAt: data.createdAt?.toDate?.()?.toISOString() ?? data.createdAt,
+      updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? data.updatedAt,
     } as User;
   } catch (error) {
     console.error("[Admin Auth] Failed to fetch user document:", error);
@@ -81,11 +84,29 @@ export const requireAdmin = async (
 ): Promise<User> => {
   const user = await requireAuth(request);
 
-  if (user.role !== "admin") {
+  if (user.role !== "department-admin" && user.role !== "master-admin") {
     throw new Error("FORBIDDEN: Admin access required");
   }
 
   return user;
+};
+
+export const isDepartmentAdmin = (user: User): boolean =>
+  user.role === "department-admin";
+
+export const isMasterAdmin = (user: User): boolean =>
+  user.role === "master-admin";
+
+export const requireDepartmentScope = (user: User): IssueCategory => {
+  if (user.role !== "department-admin") {
+    throw new Error("FORBIDDEN: Department admin access required");
+  }
+
+  if (!user.adminCategory) {
+    throw new Error("FORBIDDEN: Admin category is not assigned");
+  }
+
+  return user.adminCategory;
 };
 
 // ─── Set Custom Claims (admin promotion) ─────────────────────

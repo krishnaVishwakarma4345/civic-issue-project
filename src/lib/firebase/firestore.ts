@@ -272,12 +272,19 @@ export const getRecentIssues = async (limitCount = 5): Promise<Issue[]> => {
   return snap.docs.map(docToIssue);
 };
 
-export const getIssuesForAnalytics = async (): Promise<Issue[]> => {
-  const q    = query(
-    collection(db, COLLECTIONS.ISSUES),
-    orderBy("createdAt", "desc"),
-    limit(500)
-  );
+export const getIssuesForAnalytics = async (
+  category?: Issue["category"]
+): Promise<Issue[]> => {
+  const constraints: QueryConstraint[] = [];
+
+  if (category) {
+    constraints.push(where("category", "==", category));
+  }
+
+  constraints.push(orderBy("createdAt", "desc"));
+  constraints.push(limit(500));
+
+  const q = query(collection(db, COLLECTIONS.ISSUES), ...constraints);
   const snap = await getDocs(q);
   return snap.docs.map(docToIssue);
 };

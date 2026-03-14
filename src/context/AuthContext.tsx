@@ -23,6 +23,8 @@ interface AuthContextValue {
   loading:      boolean;
   error:        string | null;
   isAdmin:      boolean;
+  isDepartmentAdmin: boolean;
+  isMasterAdmin: boolean;
   isCitizen:    boolean;
   isLoggedIn:   boolean;
   refreshUser:  () => Promise<void>;
@@ -126,7 +128,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       userData,
       loading,
       error,
-      isAdmin:    userData?.role === "admin",
+      isAdmin:
+        userData?.role === "department-admin" ||
+        userData?.role === "master-admin",
+      isDepartmentAdmin: userData?.role === "department-admin",
+      isMasterAdmin: userData?.role === "master-admin",
       isCitizen:  userData?.role === "citizen",
       isLoggedIn: !!firebaseUser && !!userData,
       refreshUser,

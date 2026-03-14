@@ -15,7 +15,8 @@ import {
   Save,
   Mic,
 } from "lucide-react";
-import { subscribeToIssue }    from "@/lib/firebase/firestore";
+import { getIdToken }          from "@/lib/firebase/auth";
+import { useAuthContext }      from "@/context/AuthContext";
 import { useAdminIssues }      from "@/hooks/useAdminIssues";
 import PageHeader              from "@/components/layout/PageHeader";
 import { Card }                from "@/components/ui/Card";
@@ -52,6 +53,7 @@ export default function AdminIssueDetailPage() {
   const { id }     = useParams<{ id: string }>();
   const router     = useRouter();
   const { updateIssueStatus, submitting } = useAdminIssues();
+  const { isMasterAdmin } = useAuthContext();
 
   const [issue,       setIssue]       = useState<Issue | null>(null);
   const [loading,     setLoading]     = useState(true);
@@ -74,19 +76,33 @@ export default function AdminIssueDetailPage() {
     if (!id) return;
     setLoading(true);
 
-    const unsubscribe = subscribeToIssue(id, (updated) => {
-      if (!updated) {
-        setError("Issue not found.");
-      } else {
-        setIssue(updated);
-        // Pre-fill form
-        setValue("assignedDepartment", updated.assignedDepartment ?? "");
-        setValue("adminRemarks",       updated.adminRemarks       ?? "");
-      }
-      setLoading(false);
-    });
+    const fetchIssue = async () => {
+      try {
+        const token = await getIdToken(true);
+        const res = await fetch(`/api/issues/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-    return () => unsubscribe();
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error ?? "Issue not found.");
+        }
+
+        const json = await res.json();
+        const updated = json.data as Issue;
+        setIssue(updated);
+        setValue("assignedDepartment", updated.assignedDepartment ?? "");
+        setValue("adminRemarks", updated.adminRemarks ?? "");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Issue not found.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchIssue();
   }, [id, setValue]);
 
   // ─── Submit Update ────────────────────────────────────────
@@ -315,12 +331,18 @@ export default function AdminIssueDetailPage() {
           <Card>
             <p className="section-title mb-4">Update Status</p>
 
-            {allowedTransitions.length === 0 ? (
+            {isMasterAdmin && (
+              <Alert variant="info" title="Read-only access">
+                Master admin can review updates but cannot modify issue status.
+              </Alert>
+            )}
+
+            {!isMasterAdmin && allowedTransitions.length === 0 ? (
               <Alert variant="success" title="Issue Resolved">
                 This issue has been fully resolved. No further status
                 changes are available.
               </Alert>
-            ) : (
+            ) : !isMasterAdmin ? (
               <div className="space-y-2">
                 {allowedTransitions.map((nextStatus) => {
                   const meta = getStatusMeta(nextStatus);
@@ -353,10 +375,11 @@ export default function AdminIssueDetailPage() {
                   );
                 })}
               </div>
-            )}
+            ) : null}
           </Card>
 
           {/* Department & Remarks Form */}
+          {!isMasterAdmin && (
           <Card>
             <p className="section-title mb-4">Assign & Remark</p>
 
@@ -392,6 +415,7 @@ export default function AdminIssueDetailPage() {
               </Button>
             </form>
           </Card>
+          )}
 
           {/* Current Assignment */}
           {(issue.assignedDepartment || issue.adminRemarks) && (

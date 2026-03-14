@@ -35,7 +35,7 @@ const PRIORITY_OPTIONS = PRIORITIES.map((p) => ({
 // ─── Props ────────────────────────────────────────────────────
 
 interface IssueFormProps {
-  onSubmit:   (data: CreateIssueFormData, files: File[]) => Promise<void>;
+  onSubmit:   (data: CreateIssueFormData, imageUrls: string[]) => Promise<void>;
   loading?:   boolean;
   error?:     string | null;
   className?: string;
@@ -49,7 +49,7 @@ export default function IssueForm({
   error,
   className,
 }: IssueFormProps) {
-  const [imageFiles,    setImageFiles]    = useState<File[]>([]);
+  const [imageUrls,     setImageUrls]     = useState<string[]>([]);
   const [manualAddress, setManualAddress] = useState("");
 
   const {
@@ -102,7 +102,7 @@ export default function IssueForm({
   // ─── Submit ────────────────────────────────────────────────
 
   const handleFormSubmit = async (data: CreateIssueFormData) => {
-    await onSubmit(data, imageFiles);
+    await onSubmit(data, imageUrls);
   };
 
   return (
@@ -237,7 +237,9 @@ export default function IssueForm({
         </p>
 
         <ImageUploader
-          onFilesChange={setImageFiles}
+          onUploadComplete={(urls) => {
+            setImageUrls((prev) => [...prev, ...urls].slice(0, 5));
+          }}
           maxFiles={5}
           disabled={loading}
         />

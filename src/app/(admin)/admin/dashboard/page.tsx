@@ -13,8 +13,7 @@ import {
   BarChart3,
   RefreshCw,
 } from "lucide-react";
-import { adminDb }             from "@/lib/firebase-admin/config";
-import { getRecentIssues }     from "@/lib/firebase/firestore";
+import { getIdToken }          from "@/lib/firebase/auth";
 import { useAnalytics }        from "@/hooks/useAnalytics";
 import PageHeader              from "@/components/layout/PageHeader";
 import { Card, CardGrid }      from "@/components/ui/Card";
@@ -36,8 +35,19 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     const fetchRecent = async () => {
       try {
-        const issues = await getRecentIssues(6);
-        setRecentIssues(issues);
+        const token = await getIdToken(true);
+        const res = await fetch("/api/admin/issues?page=1&limit=6", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch recent issues");
+        }
+
+        const json = await res.json();
+        setRecentIssues(json.data?.issues ?? []);
       } catch (err) {
         console.error("Failed to fetch recent issues:", err);
       } finally {
