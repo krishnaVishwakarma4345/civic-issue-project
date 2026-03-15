@@ -54,6 +54,12 @@ export default function AdminSidebar() {
     ...(userData?.role === "master-admin"
       ? [
           {
+            href: "/admin/users",
+            label: "Registered Users",
+            icon: <Users size={18} />,
+            section: "Account",
+          },
+          {
             href: "/admin/user-role",
             label: "Change User Role",
             icon: <Users size={18} />,
