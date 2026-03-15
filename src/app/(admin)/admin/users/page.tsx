@@ -6,6 +6,8 @@ import { collection, onSnapshot } from "firebase/firestore";
 import PageHeader from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import Alert from "@/components/ui/Alert";
+import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
 import { useAuthContext } from "@/context/AuthContext";
 import { db } from "@/lib/firebase/config";
 import { COLLECTIONS } from "@/lib/firebase/firestore";
@@ -52,6 +54,8 @@ export default function AdminUsersPage() {
   const [rows, setRows] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | UserRow["role"]>("all");
 
   useEffect(() => {
     if (authLoading) return;
@@ -102,7 +106,23 @@ export default function AdminUsersPage() {
     return () => unsubscribe();
   }, [authLoading, userData?.role]);
 
-  const countLabel = useMemo(() => `${rows.length} registered user${rows.length === 1 ? "" : "s"}`, [rows.length]);
+  const filteredRows = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    return rows.filter((user) => {
+      const roleMatched = roleFilter === "all" || user.role === roleFilter;
+      if (!roleMatched) return false;
+
+      if (!term) return true;
+      return (
+        user.name.toLowerCase().includes(term) ||
+        user.email.toLowerCase().includes(term)
+      );
+    });
+  }, [rows, roleFilter, searchTerm]);
+
+  const countLabel = useMemo(() => {
+    return `${filteredRows.length} user${filteredRows.length === 1 ? "" : "s"} shown`;
+  }, [filteredRows.length]);
 
   if (authLoading) return null;
 
@@ -155,10 +175,36 @@ export default function AdminUsersPage() {
           <p className="text-sm text-gray-500">{countLabel}</p>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          <div className="md:col-span-2">
+            <Input
+              label="Search Users"
+              placeholder="Search by name or email"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Select
+            label="Filter by Role"
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value as "all" | UserRow["role"])}
+            options={[
+              { value: "all", label: "All Roles" },
+              { value: "citizen", label: "Citizen" },
+              { value: "department-admin", label: "Department Admin" },
+              { value: "master-admin", label: "Master Admin" },
+            ]}
+          />
+        </div>
+
         {loading ? (
           <div className="py-10 text-center text-sm text-gray-500">Loading users...</div>
         ) : rows.length === 0 ? (
           <div className="py-10 text-center text-sm text-gray-500">No users found.</div>
+        ) : filteredRows.length === 0 ? (
+          <div className="py-10 text-center text-sm text-gray-500">
+            No users match the current search/filter.
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -171,7 +217,7 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
-                {rows.map((user) => (
+                {filteredRows.map((user) => (
                   <tr key={user.uid} className="hover:bg-gray-50/80 transition-colors">
                     <td className="px-4 py-3 text-gray-900 font-medium">{user.name}</td>
                     <td className="px-4 py-3 text-gray-700">{user.email}</td>
