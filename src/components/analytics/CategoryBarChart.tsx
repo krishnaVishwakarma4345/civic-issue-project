@@ -27,14 +27,13 @@ const CHART_COLORS = [
 const CustomTooltip = ({
   active,
   payload,
-  label,
 }: {
   active?:  boolean;
-  payload?: Array<{ value: number }>;
-  label?:   string;
+  payload?: Array<{ payload: CategoryCount & { label: string }; value: number }>;
 }) => {
   if (!active || !payload?.length) return null;
-  const meta = getCategoryMeta(label as IssueCategory);
+  const item = payload[0].payload;
+  const meta = getCategoryMeta(item.category as IssueCategory);
   return (
     <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-lg text-sm">
       <p className="font-semibold text-gray-900">

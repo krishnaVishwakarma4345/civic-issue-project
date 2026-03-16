@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useCallback }   from "react";
+import React, { useCallback, useEffect }   from "react";
 import Link                     from "next/link";
+import { useSearchParams }     from "next/navigation";
 import {
   Eye,
   RefreshCw,
@@ -22,6 +23,7 @@ import { cn }                   from "@/lib/utils/cn";
 import type { Issue }           from "@/types/issue";
 
 export default function AdminIssuesPage() {
+  const searchParams = useSearchParams();
   const {
     issues,
     loading,
@@ -37,6 +39,27 @@ export default function AdminIssuesPage() {
   const handleRefresh = useCallback(() => {
     loadIssues(true);
   }, [loadIssues]);
+
+  useEffect(() => {
+    const status = searchParams.get("status");
+    const validStatuses = new Set([
+      "all",
+      "pending",
+      "reported",
+      "assigned",
+      "in-progress",
+      "resolved",
+    ]);
+
+    if (status && validStatuses.has(status) && filters.status !== status) {
+      setFilters({
+        category: "all",
+        priority: "all",
+        search: "",
+        status: status as typeof filters.status,
+      });
+    }
+  }, [searchParams, filters.status, setFilters]);
 
   return (
     <div className="space-y-6">

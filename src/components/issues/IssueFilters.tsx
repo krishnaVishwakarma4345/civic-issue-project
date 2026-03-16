@@ -27,6 +27,7 @@ const categoryOptions = [
 
 const statusOptions = [
   ALL_OPTION,
+  { value: "pending", label: "Pending" },
   ...STATUSES.map((s) => ({ value: s.value, label: s.label })),
 ];
 

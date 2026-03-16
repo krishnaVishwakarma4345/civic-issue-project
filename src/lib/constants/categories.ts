@@ -52,6 +52,15 @@ export const CATEGORIES: CategoryMeta[] = [
   },
 ];
 
+// Categories currently available in the citizen report flow.
+export const REPORTABLE_CATEGORIES: CategoryMeta[] = CATEGORIES.filter(
+  (cat) => cat.value !== "sanitation"
+);
+
+export const REPORTABLE_CATEGORY_VALUES = REPORTABLE_CATEGORIES.map(
+  (cat) => cat.value
+);
+
 export const CATEGORY_MAP = CATEGORIES.reduce(
   (acc, cat) => {
     acc[cat.value] = cat;

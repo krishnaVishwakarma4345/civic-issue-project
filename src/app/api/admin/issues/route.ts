@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
     if (params.category && params.category !== "all" && !scopedCategory) {
       q = q.where("category", "==", params.category);
     }
-    if (params.status && params.status !== "all") {
+    if (params.status && params.status !== "all" && params.status !== "pending") {
       q = q.where("status", "==", params.status);
     }
     if (params.priority && params.priority !== "all") {
@@ -70,12 +70,8 @@ export async function GET(req: NextRequest) {
     q = q.orderBy("createdAt", "desc");
 
     const fullSnap = await q.get();
-    const total    = fullSnap.size;
-    const offset   = (page - 1) * pageLimit;
 
-    let issues: AdminIssueListItem[] = fullSnap.docs
-      .slice(offset, offset + pageLimit)
-      .map((doc) => {
+    let issues: AdminIssueListItem[] = fullSnap.docs.map((doc) => {
         const data = doc.data();
         return {
           ...data,
@@ -91,6 +87,10 @@ export async function GET(req: NextRequest) {
         };
       });
 
+    if (params.status === "pending") {
+      issues = issues.filter((i) => i.status !== "resolved");
+    }
+
     // Client-side text search
     if (params.search) {
       const term = params.search.toLowerCase();
@@ -103,9 +103,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const total  = issues.length;
+    const offset = (page - 1) * pageLimit;
+    const pagedIssues = issues.slice(offset, offset + pageLimit);
+
     return successResponse(
       {
-        issues,
+        issues: pagedIssues,
         total,
         page,
         limit:   pageLimit,

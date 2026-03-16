@@ -60,7 +60,7 @@ export interface UpdateIssuePayload {
 
 export interface IssueFilters {
   category?: IssueCategory | "all";
-  status?: IssueStatus | "all";
+  status?: IssueStatus | "pending" | "all";
   priority?: IssuePriority | "all";
   search?: string;
   dateFrom?: string;

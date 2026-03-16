@@ -24,6 +24,7 @@ import { SkeletonCard }        from "@/components/ui/Spinner";
 import CategoryBarChart        from "@/components/analytics/CategoryBarChart";
 import StatusPieChart          from "@/components/analytics/StatusPieChart";
 import { formatDate }          from "@/lib/utils/formatters";
+import { REPORTABLE_CATEGORIES } from "@/lib/constants/categories";
 import { cn }                  from "@/lib/utils/cn";
 import type { Issue }          from "@/types/issue";
 
@@ -78,34 +79,46 @@ export default function AdminDashboardPage() {
 
       {/* ─── Stats Grid ───────────────────────────────────── */}
       <CardGrid cols={4}>
-        <StatsCard
-          title="Total Issues"
-          value={analytics?.totalIssues ?? 0}
-          icon={<FileText size={20} />}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-600"
-        />
-        <StatsCard
-          title="Pending Issues"
-          value={analytics?.pendingIssues ?? 0}
-          icon={<AlertCircle size={20} />}
-          iconBg="bg-red-50"
-          iconColor="text-red-600"
-        />
-        <StatsCard
-          title="In Progress"
-          value={analytics?.inProgressIssues ?? 0}
-          icon={<Clock size={20} />}
-          iconBg="bg-yellow-50"
-          iconColor="text-yellow-600"
-        />
-        <StatsCard
-          title="Resolved"
-          value={analytics?.resolvedIssues ?? 0}
-          icon={<CheckCircle2 size={20} />}
-          iconBg="bg-green-50"
-          iconColor="text-green-600"
-        />
+        <Link href="/admin/issues?status=all" className="block">
+          <StatsCard
+            title="Total Issues"
+            value={analytics?.totalIssues ?? 0}
+            icon={<FileText size={20} />}
+            iconBg="bg-blue-50"
+            iconColor="text-blue-600"
+            className="cursor-pointer hover:shadow-md transition-shadow"
+          />
+        </Link>
+        <Link href="/admin/issues?status=pending" className="block">
+          <StatsCard
+            title="Pending Issues"
+            value={analytics?.pendingIssues ?? 0}
+            icon={<AlertCircle size={20} />}
+            iconBg="bg-red-50"
+            iconColor="text-red-600"
+            className="cursor-pointer hover:shadow-md transition-shadow"
+          />
+        </Link>
+        <Link href="/admin/issues?status=in-progress" className="block">
+          <StatsCard
+            title="In Progress"
+            value={analytics?.inProgressIssues ?? 0}
+            icon={<Clock size={20} />}
+            iconBg="bg-yellow-50"
+            iconColor="text-yellow-600"
+            className="cursor-pointer hover:shadow-md transition-shadow"
+          />
+        </Link>
+        <Link href="/admin/issues?status=resolved" className="block">
+          <StatsCard
+            title="Resolved"
+            value={analytics?.resolvedIssues ?? 0}
+            icon={<CheckCircle2 size={20} />}
+            iconBg="bg-green-50"
+            iconColor="text-green-600"
+            className="cursor-pointer hover:shadow-md transition-shadow"
+          />
+        </Link>
       </CardGrid>
 
       {/* ─── KPI Row ──────────────────────────────────────── */}
@@ -137,7 +150,7 @@ export default function AdminDashboardPage() {
           <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center mx-auto mb-3">
             <BarChart3 size={18} className="text-purple-600" />
           </div>
-          <p className="text-3xl font-extrabold text-gray-900">5</p>
+          <p className="text-3xl font-extrabold text-gray-900">{REPORTABLE_CATEGORIES.length}</p>
           <p className="text-sm text-gray-500 mt-1">Issue Categories</p>
         </Card>
       </div>

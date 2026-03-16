@@ -1,6 +1,7 @@
 "use client";
 
 import React            from "react";
+import Link             from "next/link";
 import {
   TrendingUp,
   CheckCircle2,
@@ -19,7 +20,7 @@ import StatusPieChart         from "@/components/analytics/StatusPieChart";
 import Button                 from "@/components/ui/Button";
 import Alert                  from "@/components/ui/Alert";
 import { SkeletonCard }       from "@/components/ui/Spinner";
-import { CATEGORIES }         from "@/lib/constants/categories";
+import { CATEGORIES, REPORTABLE_CATEGORIES } from "@/lib/constants/categories";
 import { PRIORITIES }         from "@/lib/constants/priorities";
 import { cn }                 from "@/lib/utils/cn";
 
@@ -63,34 +64,46 @@ export default function AnalyticsPage() {
         </CardGrid>
       ) : (
         <CardGrid cols={4}>
-          <StatsCard
-            title="Total Issues"
-            value={data?.totalIssues ?? 0}
-            icon={<FileText size={20} />}
-            iconBg="bg-blue-50"
-            iconColor="text-blue-600"
-          />
-          <StatsCard
-            title="Pending"
-            value={data?.pendingIssues ?? 0}
-            icon={<AlertCircle size={20} />}
-            iconBg="bg-red-50"
-            iconColor="text-red-600"
-          />
-          <StatsCard
-            title="In Progress"
-            value={data?.inProgressIssues ?? 0}
-            icon={<Clock size={20} />}
-            iconBg="bg-yellow-50"
-            iconColor="text-yellow-600"
-          />
-          <StatsCard
-            title="Resolved"
-            value={data?.resolvedIssues ?? 0}
-            icon={<CheckCircle2 size={20} />}
-            iconBg="bg-green-50"
-            iconColor="text-green-600"
-          />
+          <Link href="/admin/issues?status=all" className="block">
+            <StatsCard
+              title="Total Issues"
+              value={data?.totalIssues ?? 0}
+              icon={<FileText size={20} />}
+              iconBg="bg-blue-50"
+              iconColor="text-blue-600"
+              className="cursor-pointer hover:shadow-md transition-shadow"
+            />
+          </Link>
+          <Link href="/admin/issues?status=pending" className="block">
+            <StatsCard
+              title="Pending"
+              value={data?.pendingIssues ?? 0}
+              icon={<AlertCircle size={20} />}
+              iconBg="bg-red-50"
+              iconColor="text-red-600"
+              className="cursor-pointer hover:shadow-md transition-shadow"
+            />
+          </Link>
+          <Link href="/admin/issues?status=in-progress" className="block">
+            <StatsCard
+              title="In Progress"
+              value={data?.inProgressIssues ?? 0}
+              icon={<Clock size={20} />}
+              iconBg="bg-yellow-50"
+              iconColor="text-yellow-600"
+              className="cursor-pointer hover:shadow-md transition-shadow"
+            />
+          </Link>
+          <Link href="/admin/issues?status=resolved" className="block">
+            <StatsCard
+              title="Resolved"
+              value={data?.resolvedIssues ?? 0}
+              icon={<CheckCircle2 size={20} />}
+              iconBg="bg-green-50"
+              iconColor="text-green-600"
+              className="cursor-pointer hover:shadow-md transition-shadow"
+            />
+          </Link>
         </CardGrid>
       )}
 
@@ -114,7 +127,7 @@ export default function AnalyticsPage() {
         />
         <KPIBlock
           label="Issue Categories"
-          value="5 types"
+          value={`${REPORTABLE_CATEGORIES.length} types`}
           icon="📂"
           color="text-purple-600"
           bg="bg-purple-50"

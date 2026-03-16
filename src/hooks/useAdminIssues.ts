@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useIssueStore } from "@/store/issueStore";
 import { useNotifications } from "@/context/NotificationContext";
 import { getIdToken } from "@/lib/firebase/auth";
@@ -31,11 +31,13 @@ export const useAdminIssues = () => {
   } = useIssueStore();
 
   const [currentPage, setCurrentPage] = useState(1);
+  const latestRequestIdRef = useRef(0);
 
   // ─── Load Issues ──────────────────────────────────────────
 
   const loadIssues = useCallback(
     async (resetPagination = true) => {
+      const requestId = ++latestRequestIdRef.current;
       setLoading(true);
       setError(null);
 
@@ -80,6 +82,8 @@ export const useAdminIssues = () => {
           page: number;
         };
 
+        if (requestId !== latestRequestIdRef.current) return;
+
         if (resetPagination) {
           setIssues(result.issues);
         } else {
@@ -95,21 +99,37 @@ export const useAdminIssues = () => {
         try {
           const categoryFilter =
             userData?.role === "department-admin" ? userData.adminCategory : undefined;
+
+          const fallbackFilters = {
+            ...filters,
+            status: filters.status === "pending" ? "all" : filters.status,
+            ...(categoryFilter ? { category: categoryFilter } : {}),
+          };
+
           const { issues: fallbackIssues } = await getAllIssues(
-            { ...filters, ...(categoryFilter ? { category: categoryFilter } : {}) },
+            fallbackFilters,
             50
           );
-          setIssues(resetPagination ? fallbackIssues : [...issues, ...fallbackIssues]);
-          setTotal(fallbackIssues.length);
+
+          const finalFallbackIssues =
+            filters.status === "pending"
+              ? fallbackIssues.filter((i) => i.status !== "resolved")
+              : fallbackIssues;
+
+          setIssues(resetPagination ? finalFallbackIssues : [...issues, ...finalFallbackIssues]);
+          setTotal(finalFallbackIssues.length);
           setHasMore(false);
           setCurrentPage(1);
         } catch (fallbackErr) {
+          if (requestId !== latestRequestIdRef.current) return;
           const message =
             fallbackErr instanceof Error ? fallbackErr.message : "Failed to load issues.";
           setError(message);
         }
       } finally {
-        setLoading(false);
+        if (requestId === latestRequestIdRef.current) {
+          setLoading(false);
+        }
       }
     },
     [

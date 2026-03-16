@@ -17,12 +17,12 @@ import Alert                      from "@/components/ui/Alert";
 import ImageUploader              from "@/components/issues/ImageUploader";
 import AudioRecorder              from "@/components/issues/AudioRecorder";
 import { createIssueSchema, type CreateIssueFormData } from "@/lib/utils/validators";
-import { CATEGORIES }             from "@/lib/constants/categories";
+import { CATEGORIES, REPORTABLE_CATEGORY_VALUES } from "@/lib/constants/categories";
 import { geocodeAddress }         from "@/lib/utils/geolocation";
 import { cn }                     from "@/lib/utils/cn";
 import type { IssueCategory, IssueLocation } from "@/types/issue";
 
-const VALID_CATEGORIES = ["road", "garbage", "water", "streetlight"] as const;
+const VALID_CATEGORIES = REPORTABLE_CATEGORY_VALUES;
 
 const FORM_STEPS = [
   { id: 1, label: "Issue Details",   icon: "📝" },
