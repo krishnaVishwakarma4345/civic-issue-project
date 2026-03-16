@@ -116,3 +116,52 @@ export const getDistanceKm = (
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
+
+/**
+ * Forward geocode a manual address to coordinates
+ * Uses the free OpenStreetMap Nominatim API — no API key required
+ */
+export const geocodeAddress = async (
+  address: string
+): Promise<IssueLocation | null> => {
+  const query = address.trim();
+  if (!query) return null;
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`,
+      {
+        headers: {
+          "Accept-Language": "en",
+          "User-Agent": "CivicIssueReportingApp/1.0",
+        },
+      }
+    );
+
+    if (!response.ok) throw new Error("Address lookup failed");
+
+    const data = (await response.json()) as Array<{
+      lat?: string;
+      lon?: string;
+      display_name?: string;
+    }>;
+
+    if (!Array.isArray(data) || data.length === 0) return null;
+
+    const top = data[0];
+    const latitude = Number(top.lat);
+    const longitude = Number(top.lon);
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return null;
+    }
+
+    return {
+      latitude,
+      longitude,
+      address: top.display_name?.trim() || query,
+    };
+  } catch {
+    return null;
+  }
+};

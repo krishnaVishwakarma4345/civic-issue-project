@@ -18,6 +18,7 @@ import ImageUploader              from "@/components/issues/ImageUploader";
 import AudioRecorder              from "@/components/issues/AudioRecorder";
 import { createIssueSchema, type CreateIssueFormData } from "@/lib/utils/validators";
 import { CATEGORIES }             from "@/lib/constants/categories";
+import { geocodeAddress }         from "@/lib/utils/geolocation";
 import { cn }                     from "@/lib/utils/cn";
 import type { IssueCategory, IssueLocation } from "@/types/issue";
 
@@ -55,6 +56,7 @@ export default function ReportIssueFormPage({
     permission,
     getLocation,
     setManualLocation,
+    reset:      resetGeolocation,
   } = useGeolocation();
 
   const [currentStep,       setCurrentStep]        = useState(1);
@@ -62,6 +64,7 @@ export default function ReportIssueFormPage({
   const [submitError,       setSubmitError]         = useState<string | null>(null);
   const [manualAddress,     setManualAddress]       = useState("");
   const [manualLocation,    setLocalManualLocation] = useState<IssueLocation | null>(null);
+  const [manualGeoLoading,  setManualGeoLoading]    = useState(false);
   const [uploadedImageUrls, setUploadedImageUrls]   = useState<string[]>([]);
   const [uploadedAudioUrl,  setUploadedAudioUrl]    = useState<string | null>(null);
 
@@ -104,9 +107,29 @@ export default function ReportIssueFormPage({
     const valid = fieldsToValidate.length === 0 ? true : await trigger(fieldsToValidate);
     if (!valid) return;
 
-    if (currentStep === 2 && !effectiveLocation && manualAddress.trim() === "") {
-      setSubmitError("Please detect your location or enter an address before continuing.");
-      return;
+    if (currentStep === 2) {
+      if (!effectiveLocation && manualAddress.trim() === "") {
+        setSubmitError("Please detect your location or enter an address before continuing.");
+        return;
+      }
+
+      if (!effectiveLocation && manualAddress.trim()) {
+        setManualGeoLoading(true);
+        const resolvedLocation = await geocodeAddress(manualAddress);
+        setManualGeoLoading(false);
+
+        if (!resolvedLocation) {
+          setSubmitError(
+            "Could not find this address on map. Please enter a more specific location or use GPS detection."
+          );
+          return;
+        }
+
+        setLocalManualLocation(resolvedLocation);
+        setManualLocation(resolvedLocation);
+        setManualAddress(resolvedLocation.address);
+        setValue("address", resolvedLocation.address, { shouldValidate: true });
+      }
     }
 
     setSubmitError(null);
@@ -135,19 +158,33 @@ export default function ReportIssueFormPage({
       setManualAddress(address);
       setValue("address", address, { shouldValidate: true });
       if (address.trim()) {
-        const loc: IssueLocation = { latitude: 20.5937, longitude: 78.9629, address };
-        setLocalManualLocation(loc);
-        setManualLocation(loc);
+        // Clear stale GPS/manual coordinates while the user edits free text.
+        setLocalManualLocation(null);
+        resetGeolocation();
       } else {
         setLocalManualLocation(null);
+        resetGeolocation();
       }
     },
-    [setManualLocation, setValue]
+    [resetGeolocation, setValue]
   );
 
   // ─── Submit ────────────────────────────────────────────────────────────────
   const onSubmit = async (data: CreateIssueFormData) => {
-    const finalLocation = effectiveLocation;
+    let finalLocation = effectiveLocation;
+
+    if (!finalLocation && manualAddress.trim()) {
+      setManualGeoLoading(true);
+      const resolvedLocation = await geocodeAddress(manualAddress);
+      setManualGeoLoading(false);
+
+      if (resolvedLocation) {
+        finalLocation = resolvedLocation;
+        setLocalManualLocation(resolvedLocation);
+        setManualLocation(resolvedLocation);
+      }
+    }
+
     if (!finalLocation) {
       setSubmitError("Location is required. Please go back and add your location.");
       setCurrentStep(2);
@@ -352,11 +389,11 @@ export default function ReportIssueFormPage({
                   type="button"
                   variant="primary"
                   size="sm"
-                  loading={geoLoading}
+                  loading={geoLoading || manualGeoLoading}
                   onClick={handleGetLocation}
                   leftIcon={<Navigation size={14} />}
                 >
-                  {geoLoading ? "Detecting..." : "Detect My Location"}
+                  {geoLoading ? "Detecting..." : manualGeoLoading ? "Resolving Address..." : "Detect My Location"}
                 </Button>
                 {permission === "denied" && (
                   <p className="text-xs text-red-500 mt-2">
@@ -478,11 +515,13 @@ export default function ReportIssueFormPage({
             <button
               type="button"
               onClick={handleNext}
+              disabled={manualGeoLoading}
               className="px-5 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium
                          hover:bg-primary-700 transition-colors
+                         disabled:opacity-60 disabled:cursor-not-allowed
                          focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-1"
             >
-              Next
+              {manualGeoLoading ? "Resolving..." : "Next"}
             </button>
           ) : (
             <Button
