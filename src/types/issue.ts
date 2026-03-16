@@ -43,7 +43,7 @@ export interface CreateIssuePayload {
   title: string;
   description: string;
   category: IssueCategory;
-  priority: IssuePriority;
+  priority?: IssuePriority;
   location: IssueLocation;
   images?: string[];
   audioUrl?: string;

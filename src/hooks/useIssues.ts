@@ -5,12 +5,10 @@ import { useCallback, useEffect, useRef } from "react";
 import { useAuthContext }    from "@/context/AuthContext";
 import { useIssueStore }     from "@/store/issueStore";
 import { useNotifications }  from "@/context/NotificationContext";
-import {
-  createIssue,
-  subscribeToUserIssues,
-} from "@/lib/firebase/firestore";
+import { subscribeToUserIssues } from "@/lib/firebase/firestore";
 import { getIdToken }        from "@/lib/firebase/auth";
 import { CreateIssuePayload, Issue } from "@/types/issue";
+import { ApiResponse } from "@/types/api";
 
 export const useIssues = () => {
   const { userData }        = useAuthContext();
@@ -75,22 +73,43 @@ export const useIssues = () => {
       setError(null);
 
       try {
-        const issue = await createIssue({
-          ...payload,
-          citizenId:    userData.uid,
-          citizenName:  userData.name,
-          citizenEmail: userData.email,
+        const token = await getIdToken(true);
+        if (!token) {
+          throw new Error("Authentication expired. Please sign in again.");
+        }
+
+        const response = await fetch("/api/issues/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title: payload.title,
+            description: payload.description,
+            category: payload.category,
+            location: payload.location,
+            images: payload.images ?? [],
+            audioUrl: payload.audioUrl,
+          }),
         });
+
+        const result = (await response.json()) as ApiResponse<Issue>;
+        if (!response.ok || !result.success || !result.data) {
+          throw new Error(result.error || "Failed to submit issue.");
+        }
+
+        const issue = result.data;
 
         // If caller still passes image files (legacy), patch them via API
         if (imageFiles.length > 0) {
           try {
-            const token = await getIdToken(true);
+            const patchToken = await getIdToken(true);
             await fetch("/api/issues/update", {
               method:  "PATCH",
               headers: {
                 "Content-Type":  "application/json",
-                "Authorization": `Bearer ${token}`,
+                "Authorization": `Bearer ${patchToken}`,
               },
               body: JSON.stringify({ id: issue.id, images: payload.images ?? [] }),
             });

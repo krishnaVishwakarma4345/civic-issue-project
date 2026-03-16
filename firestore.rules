@@ -70,16 +70,8 @@ service cloud.firestore {
       allow read: if isAuthenticated() &&
         canReadIssueByRole();
 
-      // Create: authenticated citizens only
-      allow create: if isAuthenticated() &&
-        request.resource.data.citizenId == request.auth.uid &&
-        request.resource.data.status == 'reported' &&
-        request.resource.data.title is string &&
-        request.resource.data.title.size() >= 5 &&
-        request.resource.data.title.size() <= 100 &&
-        request.resource.data.description is string &&
-        request.resource.data.description.size() >= 20 &&
-        request.resource.data.description.size() <= 1000;
+      // Create: disabled from client; issues must be created through the server API
+      allow create: if false;
 
       // Update: admin can update all fields, citizen can only update images
       allow update: if isAuthenticated() && (

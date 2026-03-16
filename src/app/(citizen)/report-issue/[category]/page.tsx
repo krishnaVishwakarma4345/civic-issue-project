@@ -12,19 +12,16 @@ import PageHeader                 from "@/components/layout/PageHeader";
 import { Card }                   from "@/components/ui/Card";
 import Input                      from "@/components/ui/Input";
 import Textarea                   from "@/components/ui/Textarea";
-import Select                     from "@/components/ui/Select";
 import Button                     from "@/components/ui/Button";
 import Alert                      from "@/components/ui/Alert";
 import ImageUploader              from "@/components/issues/ImageUploader";
 import AudioRecorder              from "@/components/issues/AudioRecorder";
 import { createIssueSchema, type CreateIssueFormData } from "@/lib/utils/validators";
 import { CATEGORIES }             from "@/lib/constants/categories";
-import { PRIORITIES }             from "@/lib/constants/priorities";
 import { cn }                     from "@/lib/utils/cn";
 import type { IssueCategory, IssueLocation } from "@/types/issue";
 
 const VALID_CATEGORIES = ["road", "garbage", "water", "streetlight"] as const;
-const PRIORITY_OPTIONS = PRIORITIES.map((p) => ({ value: p.value, label: p.label }));
 
 const FORM_STEPS = [
   { id: 1, label: "Issue Details",   icon: "📝" },
@@ -81,7 +78,6 @@ export default function ReportIssueFormPage({
       title:       "",
       description: "",
       category:    category,
-      priority:    undefined,
       address:     "",
     },
     mode: "onChange",
@@ -101,7 +97,7 @@ export default function ReportIssueFormPage({
     e.stopPropagation();
 
     const stepFields: Record<number, (keyof CreateIssueFormData)[]> = {
-      1: ["title", "description", "priority"],
+      1: ["title", "description"],
       2: ["address"],
     };
     const fieldsToValidate = stepFields[currentStep] ?? [];
@@ -165,7 +161,6 @@ export default function ReportIssueFormPage({
         title:       data.title,
         description: data.description,
         category:    category,
-        priority:    data.priority,
         location:    finalLocation,
         images:      uploadedImageUrls,
         audioUrl:    uploadedAudioUrl ?? undefined,
@@ -316,15 +311,11 @@ export default function ReportIssueFormPage({
                 />
               </div>
 
-              <Select
-                label="Priority"
-                options={PRIORITY_OPTIONS}
-                placeholder="Select priority"
-                error={errors.priority?.message}
-                required
-                hint="How urgently does this need fixing?"
-                {...register("priority")}
-              />
+              <Alert variant="info" title="Priority is assigned automatically">
+                The system sets priority after submission based on how many active issues
+                exist in the same area and the category order: water, road, streetlight,
+                then garbage.
+              </Alert>
 
               {/* ── Photo Upload ─────────────────────────────────────── */}
               <div>
@@ -424,10 +415,6 @@ export default function ReportIssueFormPage({
                 <ReviewRow label="Title"       value={watchedValues.title} />
                 <ReviewRow label="Description" value={watchedValues.description} truncate />
                 <ReviewRow label="Category"    value={`${categoryMeta.icon} ${categoryMeta.label}`} />
-                <ReviewRow
-                  label="Priority"
-                  value={PRIORITIES.find((p) => p.value === watchedValues.priority)?.label ?? watchedValues.priority}
-                />
                 <ReviewRow label="Location"    value={effectiveLocation?.address ?? "Not captured"} />
                 <ReviewRow
                   label="Photos"
@@ -451,7 +438,8 @@ export default function ReportIssueFormPage({
 
               <Alert variant="info">
                 By submitting, this issue will be assigned to the relevant municipal department
-                for review and resolution. You will receive notifications as it progresses.
+                for review and resolution. Priority will also be assigned automatically once
+                the report is created. You will receive notifications as it progresses.
               </Alert>
             </div>
           </Card>

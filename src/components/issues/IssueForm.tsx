@@ -15,7 +15,6 @@ import {
   type CreateIssueFormData,
 } from "@/lib/utils/validators";
 import { CATEGORIES }  from "@/lib/constants/categories";
-import { PRIORITIES }  from "@/lib/constants/priorities";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { cn }          from "@/lib/utils/cn";
 import type { IssueLocation } from "@/types/issue";
@@ -25,11 +24,6 @@ import type { IssueLocation } from "@/types/issue";
 const CATEGORY_OPTIONS = CATEGORIES.map((c) => ({
   value: c.value,
   label: `${c.icon} ${c.label}`,
-}));
-
-const PRIORITY_OPTIONS = PRIORITIES.map((p) => ({
-  value: p.value,
-  label: p.label,
 }));
 
 // ─── Props ────────────────────────────────────────────────────
@@ -153,14 +147,10 @@ export default function IssueForm({
             required
             {...register("category")}
           />
-          <Select
-            label="Priority"
-            options={PRIORITY_OPTIONS}
-            placeholder="Select priority"
-            error={errors.priority?.message}
-            required
-            {...register("priority")}
-          />
+          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+            Priority is assigned automatically after submission based on active reports in
+            the same area and issue category.
+          </div>
         </div>
 
         {/* Category hint */}

@@ -49,9 +49,6 @@ export const createIssueSchema = z.object({
   category: z.enum(["road", "garbage", "water", "streetlight", "sanitation"], {
     required_error: "Please select a category",
   }),
-  priority: z.enum(["low", "medium", "high"], {
-    required_error: "Please select a priority",
-  }),
   address: z
     .string()
     .min(5, "Address must be at least 5 characters")
