@@ -3,16 +3,11 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter }                    from "next/navigation";
 import Image                                       from "next/image";
-import { useForm }                                 from "react-hook-form";
-import { zodResolver }                             from "@hookform/resolvers/zod";
 import {
   ArrowLeft,
-  Building2,
-  MessageSquare,
   RefreshCw,
   CheckCircle2,
   ExternalLink,
-  Save,
   Mic,
   ImageIcon,
 } from "lucide-react";
@@ -22,8 +17,6 @@ import { useAdminIssues }      from "@/hooks/useAdminIssues";
 import PageHeader              from "@/components/layout/PageHeader";
 import { Card }                from "@/components/ui/Card";
 import Button                  from "@/components/ui/Button";
-import Select                  from "@/components/ui/Select";
-import Textarea                from "@/components/ui/Textarea";
 import Alert                   from "@/components/ui/Alert";
 import ImageUploader           from "@/components/issues/ImageUploader";
 import IssueStatusBadge        from "@/components/issues/IssueStatusBadge";
@@ -31,23 +24,11 @@ import IssuePriorityBadge      from "@/components/issues/IssuePriorityBadge";
 import IssueTimeline           from "@/components/issues/IssueTimeline";
 import { SkeletonCard }        from "@/components/ui/Spinner";
 import { getCategoryMeta }     from "@/lib/constants/categories";
-import { DEPARTMENTS }         from "@/lib/constants/departments";
 import { STATUS_TRANSITIONS,
          getStatusMeta }       from "@/lib/constants/statuses";
 import { formatDateTime,
          formatRelativeTime }  from "@/lib/utils/formatters";
-import {
-  updateIssueSchema,
-  type UpdateIssueFormData,
-} from "@/lib/utils/validators";
 import type { Issue, IssueStatus } from "@/types/issue";
-
-// ─── Department Options ───────────────────────────────────────
-
-const DEPT_OPTIONS = DEPARTMENTS.map((d) => ({
-  value: d.id,
-  label: d.name,
-}));
 
 // ─── Page ─────────────────────────────────────────────────────
 
@@ -63,16 +44,6 @@ export default function AdminIssueDetailPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [resolvedImageUrl, setResolvedImageUrl] = useState<string | null>(null);
-
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors, isDirty },
-  } = useForm<UpdateIssueFormData>({
-    resolver: zodResolver(updateIssueSchema),
-  });
 
   // ─── Real-time Subscription ───────────────────────────────
 
@@ -98,8 +69,6 @@ export default function AdminIssueDetailPage() {
         const updated = json.data as Issue;
         setIssue(updated);
         setResolvedImageUrl(updated.resolvedImageUrl ?? null);
-        setValue("assignedDepartment", updated.assignedDepartment ?? "");
-        setValue("adminRemarks", updated.adminRemarks ?? "");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Issue not found.");
       } finally {
@@ -108,28 +77,7 @@ export default function AdminIssueDetailPage() {
     };
 
     fetchIssue();
-  }, [id, setValue]);
-
-  // ─── Submit Update ────────────────────────────────────────
-
-  const onSubmit = useCallback(
-    async (data: UpdateIssueFormData) => {
-      if (!issue) return;
-      setSaveSuccess(false);
-      setActionError(null);
-
-      const success = await updateIssueStatus({
-        id:                 issue.id,
-        ...(data.assignedDepartment && {
-          assignedDepartment: data.assignedDepartment,
-        }),
-        ...(data.adminRemarks && { adminRemarks: data.adminRemarks }),
-      });
-
-      if (success) setSaveSuccess(true);
-    },
-    [issue, updateIssueStatus]
-  );
+  }, [id]);
 
   // ─── Status Transition ────────────────────────────────────
 
@@ -492,75 +440,6 @@ export default function AdminIssueDetailPage() {
             ) : null}
           </Card>
 
-          {/* Department & Remarks Form */}
-          {!isMasterAdmin && (
-          <Card>
-            <p className="section-title mb-4">Assign & Remark</p>
-
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <Select
-                label="Assign Department"
-                options={DEPT_OPTIONS}
-                placeholder="Select department"
-                error={errors.assignedDepartment?.message}
-                {...register("assignedDepartment")}
-              />
-
-              <Textarea
-                label="Admin Remarks"
-                placeholder="Add internal notes or public remarks for this issue..."
-                rows={4}
-                showCount
-                maxLength={500}
-                value={watch("adminRemarks") ?? ""}
-                error={errors.adminRemarks?.message}
-                {...register("adminRemarks")}
-              />
-
-              <Button
-                type="submit"
-                variant="primary"
-                fullWidth
-                loading={submitting}
-                leftIcon={<Save size={15} />}
-                disabled={!isDirty && !submitting}
-              >
-                Save Changes
-              </Button>
-            </form>
-          </Card>
-          )}
-
-          {/* Current Assignment */}
-          {(issue.assignedDepartment || issue.adminRemarks) && (
-            <Card>
-              <p className="section-title mb-3">Current Assignment</p>
-              {issue.assignedDepartment && (
-                <div className="flex items-center gap-2 mb-3">
-                  <Building2 size={15} className="text-blue-500 shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-500">Department</p>
-                    <p className="text-sm font-medium text-gray-800">
-                      {DEPARTMENTS.find(
-                        (d) => d.id === issue.assignedDepartment
-                      )?.name ?? issue.assignedDepartment}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {issue.adminRemarks && (
-                <div className="flex items-start gap-2">
-                  <MessageSquare size={15} className="text-purple-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs text-gray-500">Remarks</p>
-                    <p className="text-sm text-gray-700 leading-relaxed">
-                      {issue.adminRemarks}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </Card>
-          )}
         </div>
       </div>
     </div>

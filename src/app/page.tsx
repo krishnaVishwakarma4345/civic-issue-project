@@ -283,11 +283,11 @@ export default async function LandingPage() {
             {/* CTA */}
             <div className="flex items-center gap-2">
               <Link href="/login">
-                <Button variant="ghost"   size="sm">Sign In</Button>
+                <Button variant="ghost"   size="sm">Login</Button>
               </Link>
               <Link href="/register">
-                <Button variant="primary" size="sm">
-                  Get Started
+                <Button variant="primary" size="sm" >
+                  Sign Up
                   <ChevronRight size={14} />
                 </Button>
               </Link>
@@ -335,7 +335,7 @@ export default async function LandingPage() {
                   size="lg"
                   rightIcon={<ArrowRight size={18} />}
                 >
-                  Sign up
+                  Sign Up
                 </Button>
               </Link>
               <Link href="/login">
@@ -502,7 +502,7 @@ export default async function LandingPage() {
             </Link>
             <Link href="/login">
               <button className="text-primary-200 hover:text-white text-sm font-medium underline underline-offset-2 transition-colors">
-                Already have an account? Sign in →
+                Already have an account? Login →
               </button>
             </Link>
           </div>
