@@ -238,7 +238,7 @@ export default function AdminIssueDetailPage() {
                   className="w-full h-10"
                   preload="metadata"
                 />
-              </div>
+              </div >
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-100 text-sm">
